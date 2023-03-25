@@ -126,3 +126,6 @@ return (
   </Container>
 );
 }
+
+
+export default App;
