@@ -50,6 +50,29 @@ export function worldPoint(root: Part, pose: Pose, base: M, target: string, loca
   };
   return walk(root, base);
 }
+export const mulM = mul, roM = ro;
+export type Mat = M;
+
+// CCD inverse kinematics: turn the joints in `chain` (root first) so that point `eff.at` on part `eff.part` reaches
+// `target` (screen coordinates). `w` scales how much each joint may turn per pass (e.g. a torso that only leans a little).
+export function ccd(root: Part, pose: Pose, base: M, chain: string[], eff: { part: string; at: [number, number] }, target: [number, number],
+  opts: { iters?: number; w?: Record<string, number>; lim?: Record<string, [number, number]> } = {}): Pose {
+  const p: Pose = { ...pose }, sgn = Math.sign(base[0] * base[3] - base[1] * base[2]) || 1;
+  const find = (q: Part, id: string): Part | null => q.id === id ? q : (q.children || []).reduce<Part | null>((r, c) => r || find(c, id), null);
+  for (let it = 0; it < (opts.iters ?? 14); it++) {
+    for (const j of [...chain].reverse()) {
+      const pv = worldPoint(root, p, base, j, [0, 0]), e = worldPoint(root, p, base, eff.part, eff.at);
+      if (!pv || !e) continue;
+      let d = Math.atan2(target[1] - pv[1], target[0] - pv[0]) - Math.atan2(e[1] - pv[1], e[0] - pv[0]);
+      while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+      const cur = p[j] ?? find(root, j)?.rot ?? 0;
+      let nv = cur + d * 180 / Math.PI * sgn * (opts.w?.[j] ?? 1);
+      const l = opts.lim?.[j]; if (l) nv = Math.max(l[0], Math.min(l[1], nv));
+      p[j] = nv;
+    }
+  }
+  return p;
+}
 export const placeM = (x: number, y: number, s: number, flip = false): M => [flip ? -s : s, 0, 0, s, x, y];
 
 // ---------------------------------------------------------------- control rods: thin, dark, semi-transparent bamboo off the bottom
@@ -65,20 +88,25 @@ export const Rod: React.FC<{ from: [number, number]; to?: [number, number]; w?: 
 
 // A puppet placed on the screen, with depth (brief §3.3): pressed to the screen = sharp and full colour;
 // pulled back = larger, blurred, dimmer.
-export const Puppet: React.FC<{ root: Part; pose?: Pose; x: number; y: number; s?: number; flip?: boolean; depth?: number; k: string; rods?: { part: string; at: [number, number] }[]; rivetR?: number }> =
-  ({ root, pose = {}, x, y, s = 1, flip, depth = 0, k, rods = [], rivetR }) => {
-    const grow = 1 + .32 * depth, blur = depth * 16, op = 1 - .42 * depth;
-    const m = placeM(x, y, s, flip);
+export const Puppet: React.FC<{ root: Part; pose?: Pose; x: number; y: number; s?: number; flip?: boolean; depth?: number; k: string; rods?: { part: string; at: [number, number] }[]; rivetR?: number; fade?: number; rot?: number; clipBelow?: number }> =
+  ({ root, pose = {}, x, y, s = 1, flip, depth = 0, k, rods = [], rivetR, fade = 1, rot = 0, clipBelow }) => {
+    const grow = 1 + .32 * depth, blur = depth * 16, op = (1 - .42 * depth) * fade;
+    if (op <= .005) return null;
+    const m = mulM(placeM(x, y, s, flip), roM(rot));
     const rodPts = rods.map(r => worldPoint(root, pose, m, r.part, r.at)).filter(Boolean) as [number, number][];
     return (
       <g opacity={op} transform={`translate(${x} ${y}) scale(${grow}) translate(${-x} ${-y})`}>
         {blur > .3 && <defs><filter id={`dz-${k}`} x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation={blur} /></filter></defs>}
-        <g filter={blur > .3 ? `url(#dz-${k})` : undefined}>
-          {rodPts.map((p, i) => <Rod key={i} from={p} />)}
-          <g transform={`translate(${x} ${y}) scale(${flip ? -s : s} ${s})`}>
+        {clipBelow !== undefined && <defs><clipPath id={`cb-${k}`}><rect x={-4000} y={-4000} width={9000} height={4000 + clipBelow} /></clipPath></defs>}
+        <g filter={blur > .3 ? `url(#dz-${k})` : undefined} clipPath={clipBelow !== undefined ? `url(#cb-${k})` : undefined}>
+          <g data-id={k + "-rods"}>{rodPts.map((p, i) => <Rod key={i} from={p} />)}</g>
+          <g data-id={k} transform={`translate(${x} ${y}) scale(${flip ? -s : s} ${s}) rotate(${rot})`}>
             <Rig part={root} pose={pose} k={k} rivetR={rivetR} />
           </g>
         </g>
       </g>
     );
   };
+
+// the matrix a Puppet uses (depth 0), for IK targets and attaching one puppet to another's hand
+export const baseM = (x: number, y: number, s = 1, flip = false, rot = 0): M => mul(placeM(x, y, s, flip), ro(rot));
