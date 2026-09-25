@@ -288,3 +288,6 @@ export const LAKSHMAN = humanoid({ name: 'lakshman', skin: L.gold, dhoti: L.verm
 export const HANUMAN = humanoid({ name: 'hanuman', skin: L.fur, fur: L.fur, dhoti: L.vermilion, hem: L.turmeric, sash: L.leaf, head: 'monkey', crown: 'cap', weapon: 'mace', tail: true, lower: 'langot' });
 export const VANAR = humanoid({ name: 'vanar', skin: L.vanar, fur: L.vanar, dhoti: L.leaf, hem: L.turmeric, sash: L.vermilion, head: 'monkey', tail: true, lower: 'langot' });
 export const VANAR_LAUGH = humanoid({ name: 'vanarLaugh', skin: L.vanar, fur: L.vanar, dhoti: L.leaf, hem: L.turmeric, sash: L.vermilion, head: 'monkeyLaugh', tail: true, lower: 'langot' });
+// variants for the story: hands free to carry rocks, and to cradle the squirrel (bow slung away)
+export const HANUMAN_BARE = humanoid({ name: 'hanuman', skin: L.fur, fur: L.fur, dhoti: L.vermilion, hem: L.turmeric, sash: L.leaf, head: 'monkey', crown: 'cap', tail: true, lower: 'langot' });
+export const RAM_BARE = humanoid({ name: 'ram', skin: L.ramBlue, dhoti: L.turmeric, hem: L.vermilion, sash: L.leaf, head: 'human', crown: 'tall', quiver: true });

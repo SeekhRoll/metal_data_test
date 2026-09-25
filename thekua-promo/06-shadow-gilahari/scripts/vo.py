@@ -32,7 +32,7 @@ def main():
     for line in json.load(open(os.path.join(ROOT, "src/film/vo.json"), encoding="utf-8")):
         if only and line["id"] not in only:
             continue
-        text = line["text"].replace("—", ",").replace("…", ",").replace('"', "")
+        text = line.get("tts", line["text"]).replace("—", ",").replace("…", ",").replace('"', "")
         p = tok(text, return_tensors="pt")
         for seed in range(takes):
             out = os.path.join(out_dir, f"{line['id']}-{seed}.wav")

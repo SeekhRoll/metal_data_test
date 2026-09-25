@@ -28,7 +28,7 @@ export const STAGE = {
 };
 // Reserved text rectangles (brief §4). Subtitles live only on the base panel.
 export const TEXT_ZONES = {
-  subtitle: { x: 118, y: 1586, w: 844, h: 250 },
+  subtitle: { x: 134, y: 1590, w: 812, h: 246 },
 };
 
 // dyes that would turn muddy when multiplied over the warm screen get a normal-blend lift on top

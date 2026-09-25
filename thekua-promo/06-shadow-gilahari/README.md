@@ -2,7 +2,7 @@
 
 This is a 60 s, 9:16, 24 fps Tholu Bommalata (Andhra leather shadow puppetry) story film, sponsored by Sri Desi Thekua. It is built with **Remotion + SVG** following the brief.
 
-## Status: crowns redrawn, rig test done (brief §3.5, steps 1–3); scenes next. `stills/rig-test.mp4` shows the walk, the mace swing and the pendulum settle. The narration needs Hugging Face access (see below).
+## Status: complete. `output/gilahari-ka-yogdan.mp4` (60 s, 1080×1920, 24 fps), `output/gilahari-ka-yogdan-whatsapp.mp4` (720p) and `output/poster.jpg`.
 
 | Still | What to review |
 |---|---|
@@ -31,3 +31,17 @@ reverential male storyteller voice. The model is gated on Hugging Face, so it ne
 1. A Hugging Face account that has accepted the model's terms at https://huggingface.co/ai4bharat/indic-parler-tts (access is granted automatically).
 2. A read token stored in the environment as `HF_TOKEN`.
 3. Network access to Hugging Face's download hosts: `huggingface.co` and `*.hf.co` (model files are served from `cdn-lfs.hf.co`, `cas-bridge.xethub.hf.co`, `cas-server.xethub.hf.co` and `us.aws.cdn.hf.co`).
+
+## Build
+
+```bash
+npm install
+python3 scripts/vo.py            # VO takes (needs HF_TOKEN; see Narration above)
+python3 scripts/pick_vo.py       # keeps the take whose Whisper transcript best matches the script
+python3 scripts/subs.py          # subtitle cards timed to the chosen takes -> src/film/subs.json
+python3 scripts/music.py         # original score -> assets/music/music.wav
+node scripts/keyframes.mjs 7 17.5 40.9    # keyframe stills -> build/kf/
+node scripts/check-text.mjs      # brief §4.5: every 6th frame, fails on any text/graphic overlap
+npx remotion render src/index.ts Film out/film-silent.mp4 --crf=16
+python3 scripts/mix.py           # VO + ducked music + mux -> output/
+```

@@ -43,12 +43,12 @@ export const StageDefs: React.FC = () => (
 );
 
 // the lit cloth screen; `children` are the puppets (clipped to the cloth)
-export const Screen: React.FC<{ t: number; lit?: number; children?: React.ReactNode }> = ({ t, lit = 1, children }) => {
+export const Screen: React.FC<{ t: number; lit?: number; spread?: number; children?: React.ReactNode }> = ({ t, lit = 1, spread = 1, children }) => {
   const l = lamp(t), b = l.b * lit;
   return (
-    <g clipPath="url(#screenClip)">
+    <g clipPath="url(#screenClip)" data-clip="screen">
       <defs>
-        <radialGradient id="hot" gradientUnits="userSpaceOnUse" cx={l.x} cy={l.y} r={1250}>
+        <radialGradient id="hot" gradientUnits="userSpaceOnUse" cx={l.x} cy={l.y} r={1250 * Math.max(.05, spread)}>
           <stop offset="0" stopColor={SCREEN.hot} /><stop offset=".22" stopColor={SCREEN.warm} /><stop offset=".55" stopColor={SCREEN.mid} />
           <stop offset=".86" stopColor={SCREEN.edge} /><stop offset="1" stopColor={SCREEN.dark} />
         </radialGradient>
@@ -90,7 +90,7 @@ const CarvedRosette: React.FC<{ x: number; y: number; r?: number }> = ({ x, y, r
 export const Frame: React.FC<{ t: number }> = ({ t }) => {
   const l = lamp(t);
   return (
-    <g data-kind="graphic">
+    <g data-kind="surface">
       <path d={`M0 0 H${W} V${H} H0 Z ${cuspedInner()}`} fillRule="evenodd" fill={WOOD.dark} />
       <clipPath id="frameClip"><path d={`M0 0 H${W} V${H} H0 Z ${cuspedInner()}`} clipRule="evenodd" /></clipPath>
       <g clipPath="url(#frameClip)"><rect width={W} height={H} filter="url(#woodGrain)" opacity={.6} /></g>
@@ -108,7 +108,7 @@ export const Frame: React.FC<{ t: number }> = ({ t }) => {
       <rect x={54} y={B.y + 58} width={W - 108} height={H - B.y - 108} rx={10} fill="none" stroke={WOOD.brass} strokeWidth={1.8} opacity={.55} />
       {/* spill of lamp light on the base edge */}
       <rect x={S.x} y={B.y + 18} width={S.w} height={24} fill={`rgba(255,190,110,${.18 * l.b})`} />
-      {[[80, B.y + 88], [W - 80, B.y + 88], [80, H - 88], [W - 80, H - 88]].map(([x, y], i) => <CarvedRosette key={i} x={x} y={y} r={20} />)}
+      {[[80, B.y + 88], [W - 80, B.y + 88], [80, H - 88], [W - 80, H - 88]].map(([x, y], i) => <g key={i} data-kind="graphic" data-id={'rosette' + i}><CarvedRosette x={x} y={y} r={20} /></g>)}
     </g>
   );
 };
@@ -118,15 +118,15 @@ export const BaseText: React.FC<{ lines: string[]; opacity?: number; size?: numb
   const z = TEXT_ZONES.subtitle, lh = size * 1.32, y0 = z.y + z.h / 2 - (lines.length - 1) * lh / 2 + size * .34;
   return (
     <g opacity={opacity} data-zone="subtitle">
-      {lines.map((l, i) => <text key={i} data-kind="text" x={z.x + z.w / 2} y={y0 + i * lh} textAnchor="middle" fontFamily={FONT.tiro} fontSize={size} fill={color}>{l}</text>)}
+      {lines.map((l, i) => <text key={i} data-kind="text" data-id={'base-line' + i} x={z.x + z.w / 2} y={y0 + i * lh} textAnchor="middle" fontFamily={FONT.tiro} fontSize={size} fill={color}>{l}</text>)}
     </g>
   );
 };
 
-export const StageSvg: React.FC<{ t: number; lit?: number; screen?: React.ReactNode; base?: React.ReactNode; w?: number; h?: number }> = ({ t, lit, screen, base }) => (
+export const StageSvg: React.FC<{ t: number; lit?: number; spread?: number; screen?: React.ReactNode; base?: React.ReactNode; w?: number; h?: number }> = ({ t, lit, spread, screen, base }) => (
   <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
     <StageDefs />
-    <Screen t={t} lit={lit}>{screen}</Screen>
+    <Screen t={t} lit={lit} spread={spread}>{screen}</Screen>
     <Frame t={t} />
     {base}
   </svg>

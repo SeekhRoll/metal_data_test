@@ -19,8 +19,12 @@ export function squirrel(stripes: [number, number, number] = [0, 0, 0]): Part {
             <Slits pts={along([[-50, 10], [60, 8]], 14)} len={7} ang={100} w={1.6} />
             {stripes.map((s, i) => {
               if (s <= 0) return null;
-              const pts = along(BACK.map(([x, y]) => [x, y + 4 + i * 12] as [number, number]), 7);
-              return <Dots key={i} pts={pts.slice(0, Math.max(1, Math.round(pts.length * s)))} r={2.3} />;
+              const pts = along(BACK.map(([x, y]) => [x, y + 4 + i * 12] as [number, number]), 5);
+              const lit = pts.slice(0, Math.max(2, Math.round(pts.length * Math.min(1, s))));
+              return <g key={i}>
+                <path d={'M' + lit.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L')} fill="none" strokeWidth={3.4} strokeLinecap="round" />
+                <Dots pts={lit.filter((_, j) => j % 2 === 0)} r={3.2} />
+              </g>;
             })}
           </>} />
         <Leather id={k + '-e'} d="M92 -36 C88 -52 98 -58 104 -50 C106 -44 102 -38 96 -34 Z" fill={L.squirrel} />
@@ -120,4 +124,72 @@ export const thaali = (): Part => ({
   id: 'thaali', at: [0, 0],
   draw: (k) => <Leather id={k} d="M-240 -10 L240 -10 C236 20 200 40 0 44 C-200 40 -236 20 -240 -10 Z" fill={L.turmeric}
     holes={<><DotLine pts={[[-220, 4], [220, 4]]} step={14} r={3} /><DotLine pts={[[-180, 24], [180, 24]]} step={18} r={2.4} /></>} />,
+});
+
+// ---------------------------------------------------------------- the sandy shore (left), sloping into the sea
+export const bank = (): Part => ({
+  id: 'bank', at: [0, 0],
+  draw: (k) => (
+    <Leather id={k} d="M-360 260 L-360 -10 C-240 -26 -80 -30 60 -26 C150 -24 210 -8 250 20 C290 50 320 110 330 260 Z" fill={L.turmeric} alpha={.8}
+      holes={<>
+        <DotLine pts={[[-330, 10], [-100, 2], [80, 4], [200, 24], [270, 70]]} step={16} r={2.6} />
+        {Array.from({ length: 26 }, (_, i) => { const x = -320 + (i * 97) % 600, y = 50 + (i * 53) % 170; return <circle key={i} cx={x} cy={y} r={2 + (i % 3)} />; })}
+        {[-250, -60, 130].map(x => <Rosette key={x} x={x} y={110} r={14} n={6} />)}
+      </>} />
+  ),
+});
+
+// ---------------------------------------------------------------- Lanka: a golden fort on a hill, far away on the horizon
+export const lanka = (): Part => ({
+  id: 'lanka', at: [0, 0],
+  draw: (k) => {
+    const towers = [[-150, -150, 34], [-80, -210, 40], [0, -270, 48], [80, -200, 40], [150, -140, 32]];
+    let d = 'M-260 60 C-220 -30 -180 -60 -170 -70 L170 -70 C200 -40 240 0 270 60 Z';
+    towers.forEach(([x, h, w]) => {
+      d += ` M${x - w / 2} -60 L${x - w / 2} ${h + 20} C${x - w / 2} ${h - 6} ${x - 6} ${h - 22} ${x} ${h - 40} C${x + 6} ${h - 22} ${x + w / 2} ${h - 6} ${x + w / 2} ${h + 20} L${x + w / 2} -60 Z M${x - 2} ${h - 38} L${x} ${h - 70} L${x + 2} ${h - 38} Z`;
+    });
+    return <Leather id={k} d={d} fill={L.maroon} alpha={.85}
+      holes={<>
+        {towers.map(([x, h], i) => <g key={i}><path d={slitPath(x, h + 30, x, h + 50, 5)} /><circle cx={x} cy={h + 4} r={4} /></g>)}
+        <DotLine pts={[[-160, -40], [160, -40]]} step={16} r={3} />
+        {[-120, -40, 40, 120].map(x => <path key={x} d={`M${x - 10} -10 L${x - 10} -26 Q${x} -40 ${x + 10} -26 L${x + 10} -10 Z`} />)}
+      </>} />;
+  },
+});
+
+// ---------------------------------------------------------------- the sun: a perforated disc with flame rays
+export const sun = (): Part => ({
+  id: 'sun', at: [0, 0],
+  draw: (k) => {
+    let d = 'M-80 0 A80 80 0 1 0 80 0 A80 80 0 1 0 -80 0 Z';
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * Math.PI * 2, b = a + .1, c = a - .1, r = i % 2 ? 128 : 150;
+      d += ` M${Math.cos(c) * 84} ${Math.sin(c) * 84} Q${Math.cos(a - .05) * r * .8} ${Math.sin(a - .05) * r * .8} ${Math.cos(a) * r} ${Math.sin(a) * r} Q${Math.cos(a + .05) * r * .8} ${Math.sin(a + .05) * r * .8} ${Math.cos(b) * 84} ${Math.sin(b) * 84} Z`;
+    }
+    return <Leather id={k} d={d} fill={L.vermilion} alpha={.72}
+      holes={<><Rosette x={0} y={0} r={42} n={12} /><DotLine pts={arcPts(0, 0, 64, 64, 0, Math.PI * 2, 40)} step={13} r={3} /></>} />;
+  },
+});
+
+// ---------------------------------------------------------------- a leather placard for the end card; text is cut through
+export type BannerLine = { text: string; size: number; y: number; font?: string };
+export const banner = (w: number, h: number, fill: string, lines: BannerLine[], id = 'banner'): Part => ({
+  id, at: [0, 0],
+  draw: (k) => (
+    <Leather id={k} d={`M${-w / 2} ${-h / 2} Q0 ${-h / 2 - 34} ${w / 2} ${-h / 2} L${w / 2} ${h / 2} Q0 ${h / 2 + 30} ${-w / 2} ${h / 2} Z`} fill={fill} alpha={.9}
+      holes={<>
+        <DotLine pts={[[-w / 2 + 26, -h / 2 + 10], [0, -h / 2 - 22], [w / 2 - 26, -h / 2 + 10]]} step={14} r={2.8} />
+        <DotLine pts={[[-w / 2 + 26, h / 2 - 12], [0, h / 2 + 16], [w / 2 - 26, h / 2 - 12]]} step={14} r={2.8} />
+        <Rosette x={-w / 2 + 40} y={0} r={16} /><Rosette x={w / 2 - 40} y={0} r={16} />
+        {lines.map((l, i) => <text key={i} x={0} y={l.y} textAnchor="middle" fontFamily={l.font || FONT.tiro} fontSize={l.size}>{l.text}</text>)}
+      </>} />
+  ),
+});
+
+// ---------------------------------------------------------------- tiny leather bits: sand specks and water drops
+export const speck = (r = 5, fill: string = L.turmeric): Part => ({
+  id: 'speck', at: [0, 0], draw: (k) => <Leather id={k} d={`M${-r} 0 A${r} ${r} 0 1 0 ${r} 0 A${r} ${r} 0 1 0 ${-r} 0 Z`} fill={fill} alpha={.9} edge={1} />,
+});
+export const drop = (): Part => ({
+  id: 'drop', at: [0, 0], draw: (k) => <Leather id={k} d="M0 -12 C6 -2 8 4 0 8 C-8 4 -6 -2 0 -12 Z" fill={L.indigo} alpha={.75} edge={1} />,
 });
