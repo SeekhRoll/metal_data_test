@@ -27,7 +27,7 @@ Every visual is drawn in code and the music is an original synthesized bhangra-s
 
 ## Customize and re-render
 
-1. Edit the top of `promo.html`: `BRAND`, `PHONE` (currently `+91 81782 26605`) and `AREA`. The promise claims are in `PROPS`. Change any that don't match your kitchen, such as the "no preservatives" or "fresh every week" cards or the sectors 1–29 delivery area.
+1. Edit the top of `promo.html`: `BRAND` (currently `Sri Desi Thekua`), `PHONE` (currently `+91 81782 26605`) and `AREA`. The promise claims are in `PROPS`. Change any that don't match your kitchen, such as the "no preservatives" or "fresh every week" cards or the sectors 1–29 delivery area.
 2. Open `promo.html` in a browser to see a live, looping preview.
 3. Build:
 
