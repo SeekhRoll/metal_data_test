@@ -20,7 +20,7 @@ const Subtitle: React.FC<{ t: number }> = ({ t }) => {
   return <BaseText lines={c.lines} size={54} opacity={a} />;
 };
 const Moral: React.FC<{ t: number }> = ({ t }) => {
-  const a = seg(t, 45.9, 46.6) * (1 - seg(t, 51.5, 51.95));
+  const a = seg(t, 46.6, 47.1) * (1 - seg(t, 51.5, 51.95));
   if (a <= 0) return null;
   return <BaseText lines={['कोई काम छोटा नहीं होता,', 'अगर मन पूरा हो।']} size={62} color="#F6C860" opacity={a} />;
 };

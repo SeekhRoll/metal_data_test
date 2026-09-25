@@ -71,7 +71,7 @@ def main():
             t += share
     # never let two cards overlap
     for a, b in zip(cards, cards[1:]):
-        a["to"] = min(a["to"], b["from"] - .04)
+        a["to"] = round(min(a["to"], b["from"] - .04), 2)
     json.dump(cards, open(os.path.join(ROOT, "src/film/subs.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for c in cards:
         print(c["from"], c["to"], " / ".join(c["lines"]))
