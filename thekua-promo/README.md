@@ -1,51 +1,54 @@
-# ठेकुआ — 30s promo for Dwarka, New Delhi
+# Sri Desi Thekua: 30-second promos for Dwarka
 
-A vertical (9:16) promo for homemade thekua, made for Instagram Reels, YouTube Shorts and WhatsApp Status and aimed at people living in Dwarka.
+These are vertical (9:16) promos for homemade thekua, sized for Instagram Reels, YouTube Shorts and WhatsApp Status and aimed at people who live in Dwarka, New Delhi. Each concept has its own folder:
 
-| File | Use |
-|---|---|
-| `output/thekua-promo-dwarka.mp4` | Full quality: 1080×1920, 30 fps, 30 s, H.264 + AAC |
-| `output/thekua-promo-dwarka-whatsapp.mp4` | 720p, about 12 MB, for WhatsApp groups and Status |
-| `output/poster.jpg` | Thumbnail or cover frame |
-| `output/thekua-promo-dwarka-cute.mp4` | **Hand-drawn cut**: the same 30s story as cute, doodled animation |
-| `output/thekua-promo-dwarka-cute-whatsapp.mp4` | Hand-drawn cut at 720p, about 12 MB |
-| `output/poster-cute.jpg` | Hand-drawn end card |
+| Folder | Concept | Look & feel |
+|---|---|---|
+| [`01-cinematic/`](01-cinematic) | Premium product film | Dark wood, gold foil type, diya light, bhangra dhol track |
+| [`02-hand-drawn/`](02-hand-drawn) | Cute doodle animation | Wobbly ink lines, pastel crayon, kawaii characters, bouncy marimba |
+| [`03-ghar-ki-mithas/`](03-ghar-ki-mithas) | "घर की मिठास" (the sweetness of home) | Vivid flat illustration, one continuous shot through family life, bansuri and santoor |
 
-## Hand-drawn cut (`promo-cute.html` + `soundtrack_cute.py`)
+Every concept folder has the same layout:
 
-This version uses wobbly ink outlines that are redrawn 8 times a second, crayon-textured pastel fills on paper grain, and kawaii characters. It opens on a doodled Dwarka skyline with a smiling Blue Line metro. A thekua mascot waves hello, and the ingredient friends (the atta sack, jaggery cube, ghee katori, coconut and cardamom with fennel buddies) hop in and dive into the parat. The dough gets squished in the sancha, then the thekuas relax in a kadhai "hot tub" as they turn golden. After a **CRUNCH!**, the promises appear as taped-on sticky notes and a scooter delivers across the Dwarka sectors. It ends with the mascot and a chai cup on the WhatsApp end card. The music is a bouncy marimba, kalimba and dholak track with boings and pops, on the same 120 BPM grid.
+```
+<concept>/
+  promo.html        the animation (open it in a browser for a live, looping preview)
+  soundtrack.py     original synthesized music, timed to the scene cuts
+  output/
+    promo.mp4           1080×1920, 30 fps, 30 s, H.264 + AAC
+    promo-whatsapp.mp4  720p, about 12 MB, for WhatsApp groups and Status
+    poster.jpg          cover or thumbnail frame
+```
 
-## Storyboard (120 BPM, every cut lands on a beat)
+Every visual is drawn in code and all music is synthesized from scratch, so there is no stock footage or music licensing to worry about.
 
-| Time | Scene |
-|---|---|
-| 0–2s | Cold open: a diya lights in the dark. *"Dwarka, कुछ मीठा हो जाए?"* |
-| 2–4s | Title hit: **ठेकुआ** in gold foil with a spinning thekua. *बिहार का असली स्वाद, अब आपके द्वारका में* |
-| 4–9s | Ingredients, one per second: आटा · गुड़ · देसी घी · नारियल · सौंफ-इलायची |
-| 9–10s | Everything swirls into a dough ball: *प्यार से गूँधा* |
-| 10–12.5s | Pressed in a wooden sancha: *हाथ से बना, साँचे में ढला* |
-| 12.5–15s | Fried in a kadhai, going from raw to golden: *Golden. Crispy. Perfect.* |
-| 15–18.5s | Hero shot of a brass thali on a banana leaf, with steam and diyas: *बाहर से कुरकुरा, अंदर से नरम* |
-| 18.5–20s | Close-up snap with crumbs flying: *Crrrunch!* |
-| 20–25s | Five promises: 100% homemade · pure desi ghee · no preservatives · fresh every week · delivery to Dwarka sectors 1–29 |
-| 25–30s | End card with marigold garland, logo and the WhatsApp CTA. *छठ स्पेशल · चाय के साथ परफ़ेक्ट* |
+## 03: घर की मिठास
 
-Every visual is drawn in code and the music is an original synthesized bhangra-style track (dhol, tumbi, sitar, shehnai), so there is no stock footage and no licensing to worry about.
+The film follows one thekua in a single unbroken camera move. The camera flies through windows and screens instead of cutting.
+
+| Time | Scene | Words on screen |
+|---|---|---|
+| 0–4.8s | Dawn kitchen. Nani presses a thekua in the sancha and it floats up into the window… | कुछ स्वाद सिर्फ़ स्वाद नहीं होते… |
+| 4.8–9.6s | …which *is* the Chhath ghat at sunrise. The thekua lands in a mother's soop and the camera dives into it… | वो दुआ होते हैं, |
+| 9.6–14.4s | …and comes out of mom's tiffin in a hostel room at night ("खाना टाइम पे खाना — माँ ♥"). The student video-calls home and the camera flies into the phone… | घर की याद होते हैं, |
+| 14.4–19.2s | …to the family on a rainy evening: Dadaji dunks thekua in chai, the kids grab from the plate, and the cat naps on the sill. The camera pulls back out through the window… | सबका साथ होते हैं… |
+| 19.2–24s | …to the whole building at dusk. Neighbours share with a basket on a rope, and the camera rises past kites and sky lanterns… | हर घर में, हर त्योहार में |
+| 24–30s | …to the thekua glowing like the sun, with the brand and WhatsApp CTA. | घर की मिठास, आपके घर तक |
+
+The music is at 100 BPM, with each scene lasting exactly two bars. It uses santoor arpeggios over a D–A–Bm–G progression, a bansuri melody and soft tabla that grows into dholak and claps for the family scene. There's a temple bell when the thekua lands in the soop and a rain bed at home.
 
 ## Customize and re-render
 
-1. Edit the top of `promo.html` (or `promo-cute.html`): `BRAND` (currently `Sri Desi Thekua`), `PHONE` (currently `+91 81782 26605`) and `AREA`. The promise claims are in `PROPS`. Change any that don't match your kitchen, such as the "no preservatives" or "fresh every week" cards or the sectors 1–29 delivery area.
-2. Open `promo.html` in a browser to see a live, looping preview.
-3. Build:
+1. Each `promo.html` has `BRAND`, `PHONE` and `AREA` at the top (currently `Sri Desi Thekua`, `+91 81782 26605` and Dwarka, New Delhi). Change any promise that doesn't match your kitchen. In 01 these are in `PROPS`, and in 02 they're in `NOTES`: the no-preservatives, fresh-every-week and sectors 1–29 delivery claims.
+2. Build (run from this folder):
 
 ```bash
 pip install numpy scipy imageio-ffmpeg     # ffmpeg binary comes with imageio-ffmpeg
 npm i -g playwright                        # or use an existing install
-python3 soundtrack.py                      # -> build/soundtrack.wav
-node render.js                             # -> build/thekua-promo-dwarka.mp4  (~4 min)
-node render.js --stills 2.5,16,27          # quick JPG previews of chosen moments
 
-# hand-drawn cut
-python3 soundtrack_cute.py                 # -> build/soundtrack_cute.wav
-node render.js --page promo-cute.html --audio soundtrack_cute.wav --name thekua-promo-dwarka-cute
+python3 03-ghar-ki-mithas/soundtrack.py    # -> 03-ghar-ki-mithas/build/soundtrack.wav
+node render.js 03-ghar-ki-mithas           # -> 03-ghar-ki-mithas/output/{promo.mp4, promo-whatsapp.mp4, poster.jpg}
+node render.js 03-ghar-ki-mithas --stills 4.4,9.5,14   # quick JPG previews in <concept>/build/
 ```
+
+To start a new concept, copy a concept folder to a new number (for example `04-…`), edit its `promo.html` and `soundtrack.py`, and run the same two commands. Shared fonts live in `fonts/`.
