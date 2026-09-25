@@ -15,14 +15,24 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 END, BREATH, EARLY = 59.7, .3, 1.2
 
 
-def layout(durs, anchors, tempo, early):
-    starts, t = [], 0.0
-    for d, a in zip(durs, anchors):
-        s = max(a - early, t + BREATH if starts else a)
-        s = max(s, a - early)
-        starts.append(s)
-        t = s + d / tempo
-    return starts, t
+def layout(durs, anchors, tempo):
+    """Forward pass: each line at its anchor or after the previous one. Backward pass: pull only the lines that
+    must move earlier (never more than EARLY before their anchor) so the last one ends by END."""
+    d = [x / tempo for x in durs]
+    starts, t = [], -1.0
+    for di, a in zip(d, anchors):
+        s = max(a, t + BREATH) if starts else a
+        starts.append(s); t = s + di
+    limit = END
+    for i in range(len(starts) - 1, -1, -1):
+        starts[i] = min(starts[i], limit - d[i])
+        if starts[i] < anchors[i] - EARLY or (i and starts[i] < 0):
+            return starts, None
+        limit = starts[i] - BREATH
+    for i in range(1, len(starts)):
+        if starts[i] < starts[i - 1] + d[i - 1] + BREATH - 1e-6:
+            return starts, None
+    return starts, starts[-1] + d[-1]
 
 
 def main():
@@ -32,14 +42,12 @@ def main():
         a, sr = sf.read(os.path.join(ROOT, "assets/vo", l["id"] + ".wav"))
         durs.append(len(a) / sr)
     anchors = [l["at"] for l in lines]
-    # pull lines earlier only as much as needed, then speed up only as much as needed
+    # prefer natural speed: first let lines start a little before their anchors, then speed up as little as needed
     best = None
-    for early in (0, .4, .8, EARLY):
-        for tempo in [1 + k * .01 for k in range(16)]:
-            starts, end = layout(durs, anchors, tempo, early)
-            if end <= END:
-                best = (tempo, early, starts); break
-        if best: break
+    for tempo in [1 + k * .01 for k in range(16)]:
+        starts, end = layout(durs, anchors, tempo)
+        if end is not None:
+            best = (tempo, max(a - s for a, s in zip(anchors, starts)), starts); break
     if not best:
         raise SystemExit(f"narration too long: {sum(durs):.1f}s of speech; shorten a line or re-take")
     tempo, early, starts = best
