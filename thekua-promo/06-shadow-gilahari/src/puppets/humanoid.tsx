@@ -24,65 +24,61 @@ const MONKEY_MASK = 'M6 -14 C30 -22 62 -28 74 -48 C80 -64 72 -78 60 -80 C58 -98 
 
 const Pupil: React.FC<{ x: number; y: number }> = ({ x, y }) => <circle cx={x} cy={y} r={5.5} fill={L.black} opacity={.92} />;
 
-// Kireetam: one smooth shikhara-like silhouette (no stacked tiers), jewelled brow band, amalaka ring and
-// kalasha finial, with curled flame-leaf karnapatra flares sweeping back behind the head.
-// 'tall' = Ram, 'short' = Lakshman, 'cap' = Hanuman's rounded mukut.
-function crown(kind: 'tall' | 'short' | 'cap', k: string, ox = 4) {
-  const f = (n: number) => n.toFixed(1);
-  const yB = kind === 'cap' ? -120 : -134, y1 = yB - 38;                          // brow and top of the band
-  const h = kind === 'tall' ? 150 : kind === 'short' ? 96 : 62, yT = y1 - h;
-  const hw = (u: number) => kind === 'cap' ? 48 * Math.sqrt(Math.max(0, 1 - u * u)) + 2 : 44 - 32 * Math.pow(u, 1.25);
-  const band = `M${ox - 50} ${yB} C${ox - 24} ${yB - 7} ${ox + 30} ${yB - 7} ${ox + 56} ${yB} L${ox + 50} ${y1} C${ox + 22} ${y1 - 6} ${ox - 18} ${y1 - 6} ${ox - 46} ${y1} Z`;
-  const petals = Array.from({ length: 7 }, (_, i) => { const x = ox - 42 + i * 14.5; return `M${f(x - 7)} ${yB - 3} Q${f(x)} ${yB + 12} ${f(x + 7)} ${yB - 3} Z`; }).join(' ');
-  const tower = kind === 'cap'
-    ? `M${ox - 46} ${y1 + 2} C${ox - 50} ${y1 - h * .9} ${ox - 20} ${yT} ${ox} ${yT} C${ox + 20} ${yT} ${ox + 50} ${y1 - h * .9} ${ox + 46} ${y1 + 2} Z`
-    : `M${ox - 44} ${y1 + 2} C${ox - 48} ${f(y1 - h * .45)} ${ox - 14} ${f(yT + h * .25)} ${ox - 11} ${yT} L${ox + 11} ${yT} C${ox + 14} ${f(yT + h * .25)} ${ox + 48} ${f(y1 - h * .45)} ${ox + 44} ${y1 + 2} Z`;
-  const kT = yT - (kind === 'cap' ? 2 : 0);
-  const finial = `M${ox - 22} ${kT + 2} C${ox - 22} ${kT - 10} ${ox + 22} ${kT - 10} ${ox + 22} ${kT + 2} C${ox + 22} ${kT + 8} ${ox - 22} ${kT + 8} ${ox - 22} ${kT + 2} Z`
-    + ` M${ox - 13} ${kT - 6} C${ox - 16} ${kT - 26} ${ox - 6} ${kT - 34} ${ox} ${kT - 36} C${ox + 6} ${kT - 34} ${ox + 16} ${kT - 26} ${ox + 13} ${kT - 6} Z`
-    + ` M${ox - 5} ${kT - 34} C${ox - 3} ${kT - 44} ${ox - 1} ${kT - 54} ${ox} ${kT - 62} C${ox + 1} ${kT - 54} ${ox + 3} ${kT - 44} ${ox + 5} ${kT - 34} Z`;
-  // tower perforations: dot bands that follow the taper, a diamond lattice between them, jewel rosettes
-  const rows = kind === 'tall' ? [.18, .5, .8] : kind === 'short' ? [.22, .62] : [.35];
-  const lat: React.ReactNode[] = [];
-  rows.forEach((u, r) => {
-    const y = y1 - h * u, w = hw(u) * .78;
-    lat.push(<Dots key={'b' + r} pts={Array.from({ length: 7 }, (_, j) => [ox - w + j * (2 * w / 6), y] as [number, number])} r={2.8} />);
-    const u2 = rows[r + 1] ?? .96, ym = y1 - h * (u + u2) / 2, wm = hw((u + u2) / 2) * .6, n = Math.max(1, Math.round(wm / 12));
-    for (let j = -n; j <= n; j += 2) lat.push(<path key={'d' + r + j} d={`M${f(ox + j * wm / n)} ${f(ym - 9)} L${f(ox + j * wm / n + 5)} ${f(ym)} L${f(ox + j * wm / n)} ${f(ym + 9)} L${f(ox + j * wm / n - 5)} ${f(ym)} Z`} />);
-  });
-  // karnapatra: a scalloped fan plate behind the head (reads as ornament, not horns)
-  const cx = ox - 26, cy = y1 + 18, R = kind === 'cap' ? 74 : 96, r0 = 30, A0 = 150, A1 = kind === 'tall' ? 282 : 270, n = kind === 'cap' ? 4 : 6;
-  const P = (a: number, r: number): [number, number] => [cx + Math.cos(a * Math.PI / 180) * r, cy + Math.sin(a * Math.PI / 180) * r];
-  let fan = `M${P(A0, r0).map(f).join(' ')} L${P(A0, R).map(f).join(' ')}`;
-  for (let i = 0; i < n; i++) {
-    const a0 = A0 + (A1 - A0) * i / n, a1 = A0 + (A1 - A0) * (i + 1) / n, am = (a0 + a1) / 2;
-    fan += ` Q${P(am - 6, R * 1.3).map(f).join(' ')} ${P(am + 4, R * 1.12).map(f).join(' ')} Q${P(a1 - 2, R * 1.02).map(f).join(' ')} ${P(a1, R * .94).map(f).join(' ')}`;
-  }
-  fan += ` L${P(A1, r0).map(f).join(' ')} A${r0} ${r0} 0 0 0 ${P(A0, r0).map(f).join(' ')} Z`;
-  const fanHoles = <>
-    {Array.from({ length: n }, (_, i) => { const am = A0 + (A1 - A0) * (i + .5) / n; return <Slit key={i} a={P(am, r0 + 14)} b={P(am + 3, R * .98)} w={3} />; })}
-    <DotLine pts={arcPts(cx, cy, R * .62, R * .62, (A0 + 4) * Math.PI / 180, (A1 - 4) * Math.PI / 180, 20)} step={12} r={2.6} />
-  </>;
+// Mukut (after Tholu Bommalata kireetams, our own drawing): one big jewelled mass that wraps the head
+// from the brow to the nape, bulging at the back and rising into a short, forward-leaning spire. Rows of
+// round flower medallions, a jewelled brow band with drops, banded spire rings, a large ear disc and a
+// jewelled lock hanging behind. 'tall' = Ram, 'short' = Lakshman, 'cap' = Hanuman.
+type P2 = [number, number];
+const bez = (a: P2, b: P2, c: P2, d: P2, n: number): P2[] => Array.from({ length: n + 1 }, (_, i) => {
+  const t = i / n, u = 1 - t;
+  return [u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]];
+});
+function crownPath(kind: 'tall' | 'short' | 'cap') {
+  const T = kind === 'tall' ? -336 : kind === 'short' ? -300 : -282, sx = kind === 'cap' ? 6 : 16;
+  const back = kind === 'cap' ? -80 : -84, top = kind === 'tall' ? -244 : -236;
+  // a flame-like mound: near-vertical front over the brow, tapering continuously to a forward-leaning tip
+  return `M54 -140 C62 -172 52 -210 42 -236 C34 -262 ${sx + 8} ${T + 34} ${sx} ${T} C${sx - 16} ${T + 42} -30 ${top - 8} -50 ${top + 14} `
+    + `C-70 ${top + 30} ${back - 4} -196 ${back + 2} -150 C${back + 4} -112 -74 -86 -56 -66 C-44 -80 -26 -100 -8 -116 C12 -130 32 -138 54 -140 Z`;
+}
+const DISC = 'M-38 -96 C-38 -110 -26 -120 -14 -120 C-2 -120 10 -110 10 -96 C10 -82 -2 -72 -14 -72 C-26 -72 -38 -82 -38 -96 Z';
+const MONKEY_CROWN = 'translate(0 22) scale(.86)';
+function crown(kind: 'tall' | 'short' | 'cap', k: string, human = true) {
+  const T = kind === 'tall' ? -336 : kind === 'short' ? -300 : -282, sx = kind === 'cap' ? 6 : 16;
+  const d = crownPath(kind);
+  // brow band along the lower edge, with hanging drops over the forehead
+  const baseCurve = [...bez([-56, -66], [-44, -80], [-26, -100], [-8, -116], 8), ...bez([-8, -116], [12, -130], [32, -138], [54, -140], 8).slice(1)];
+  const bandDots = along(baseCurve.map(([x, y]) => [x + 4, y - 16] as P2), 10);
+  const medallions: [number, number, number][] = kind === 'cap'
+    ? [[-58, -116, 13], [-34, -142, 14], [-6, -156, 14], [22, -162, 13], [-64, -166, 13], [-38, -196, 14], [-10, -208, 12]]
+    : [[-60, -114, 13], [-36, -140, 15], [-8, -156, 15], [22, -164, 14], [-70, -166, 14], [-46, -196, 15], [-16, -212, 14], [14, -208, 12], [-44, -228, 9], ...(kind === 'tall' ? [[-10, -244, 11], [16, -236, 10]] as [number, number, number][] : [[2, -236, 10]] as [number, number, number][])];
+  const ringYs = kind === 'tall' ? [-246, -276, -304] : kind === 'short' ? [-246, -272] : [-248];
+  const cw = (y: number) => { const f = (y - T) / (-232 - T); return 6 + 22 * Math.max(0, Math.min(1, f)); };   // spire half-width at y
   return (
     <g>
-      <Leather id={k + '-kp'} d={fan} fill={L.vermilion} alpha={.8} holes={fanHoles} />
-      <Leather id={k + '-crown'} d={`${tower} ${finial}`} fill={L.turmeric}
+      {human && (
+        <Leather id={k + '-lock'} d={tube([[-58, -70, 18], [-66, -20, 15], [-64, 30, 12], [-58, 64, 8]])} fill={L.turmeric}
+          holes={<Dots pts={along([[-58, -60], [-66, -20], [-64, 30], [-58, 58]], 14)} r={2.8} />}
+          paint={<>{[-40, 0, 40].map(y => <circle key={y} cx={-65} cy={y} r={5} fill={L.vermilion} opacity={.7} />)}</>} />
+      )}
+      <Leather id={k + '-crown'} d={d} fill={L.turmeric}
         holes={<>
-          {lat}
-          <DotLine pts={[[ox, y1 - 8], [ox, yT + 12]]} step={kind === 'cap' ? 11 : 13} r={2.2} />
-          {kind !== 'cap' && <Rosette x={ox} y={y1 - h * .34} r={11} />}
-          <circle cx={ox} cy={kT - 18} r={3.2} />
+          <Dots pts={bandDots} r={2.6} />
+          {medallions.map(([x, y, r], i) => <Rosette key={i} x={x} y={y} r={r} n={8} />)}
+          {ringYs.map(y => <Dots key={y} pts={Array.from({ length: 5 }, (_, j) => [sx + 4 - cw(y) * .7 + j * cw(y) * .35, y + 7] as P2)} r={2.2} />)}
+          <circle cx={sx + 1} cy={T + 22} r={3.4} />
         </>}
         paint={<>
-          {rows.map((u, r) => { const y = y1 - h * u, w = hw(u); return <path key={r} d={`M${f(ox - w)} ${f(y - 5)} L${f(ox + w)} ${f(y - 5)} L${f(ox + w)} ${f(y + 5)} L${f(ox - w)} ${f(y + 5)} Z`} fill={L.vermilion} opacity={.55} />; })}
-          <path d={`M${ox - 22} ${kT + 2} C${ox - 22} ${kT - 10} ${ox + 22} ${kT - 10} ${ox + 22} ${kT + 2} Z`} fill={L.leaf} opacity={.6} />
+          <path d="M-56 -66 C-44 -80 -26 -100 -8 -116 C12 -130 32 -138 54 -140" fill="none" stroke={L.vermilion} strokeWidth={20} opacity={.6} />
+          {medallions.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r * 1.18} fill={i % 2 ? L.leaf : L.vermilion} opacity={.55} />)}
+          {ringYs.map((y, i) => <path key={y} d={`M${sx - 60} ${y - 4} L${sx + 60} ${y - 10} L${sx + 60} ${y} L${sx - 60} ${y + 6} Z`} fill={i % 2 ? L.leaf : L.vermilion} opacity={.6} />)}
+          <path d={`M${sx - 40} ${T + 30} L${sx + 40} ${T + 26} L${sx + 40} ${T + 34} L${sx - 40} ${T + 38} Z`} fill={L.maroon} opacity={.5} />
         </>} />
-      <Leather id={k + '-band'} d={`${band} ${petals}`} fill={L.turmeric}
-        holes={<>
-          <Dots pts={Array.from({ length: 9 }, (_, i) => [ox - 38 + i * 10.5, yB - 26] as [number, number])} r={2.6} />
-          <Rosette x={ox + 4} y={yB - 16} r={11} n={6} />
-        </>}
-        paint={<>{[-30, 30].map(dx => <ellipse key={dx} cx={ox + 4 + dx} cy={yB - 16} rx={7} ry={5} fill={L.leaf} opacity={.7} />)}</>} />
+      <Leather id={k + '-drops'} fill={L.turmeric}
+        d={bez([4, -122], [20, -130], [36, -136], [52, -139], 3).slice(0, 3).map(([x, y]) => `M${(x - 4).toFixed(1)} ${(y + 2).toFixed(1)} L${(x + 4).toFixed(1)} ${(y + 1).toFixed(1)} C${(x + 5).toFixed(1)} ${(y + 10).toFixed(1)} ${(x - 5).toFixed(1)} ${(y + 11).toFixed(1)} ${(x - 4).toFixed(1)} ${(y + 2).toFixed(1)} Z`).join(' ')} />
+      {/* big ear disc (kundala plate) */}
+      <Leather id={k + '-disc'} d={DISC} fill={L.turmeric}
+        holes={<><Rosette x={-14} y={-96} r={15} n={10} /><DotLine pts={arcPts(-14, -96, 20, 20, 0, Math.PI * 2, 24)} step={9} r={1.8} /></>}
+        paint={<circle cx={-14} cy={-96} r={17} fill={L.vermilion} opacity={.5} />} />
     </g>
   );
 }
@@ -90,7 +86,7 @@ function crown(kind: 'tall' | 'short' | 'cap', k: string, ox = 4) {
 function headPart(o: Opts): Part {
   const monkey = o.head !== 'human';
   const earring: Part = {
-    id: 'earring', at: monkey ? [-6, -70] : [-12, -80], rivet: true,
+    id: 'earring', at: monkey ? [-6, -70] : [-14, -76], rivet: true,
     draw: (k) => <Leather id={k} d="M-10 0 L10 0 L14 34 C14 50 -14 50 -14 34 Z" fill={L.turmeric} holes={<circle cx={0} cy={34} r={6} />} />,
   };
   return {
@@ -98,8 +94,8 @@ function headPart(o: Opts): Part {
     children: [earring],
     draw: (k) => monkey ? (
       <g transform="scale(1.32)">
-        <Leather id={k + '-h'} d={MONKEY_HEAD} fill={o.fur || L.fur} holes={<><DotLine pts={arcPts(-6, -70, 36, 60, Math.PI * .6, Math.PI * 1.4)} step={12} r={3} /><circle cx={-8} cy={-96} r={8} /></>} />
-        <Leather id={k + '-m'} d={MONKEY_MASK} fill={L.monkeyFace} alpha={.86}
+        <Leather id={k + '-h'} d={MONKEY_HEAD} fill={o.fur || L.fur} cut={o.crown && <g transform={MONKEY_CROWN}><path d={crownPath(o.crown)} /><path d={DISC} /></g>} holes={<><DotLine pts={arcPts(-6, -70, 36, 60, Math.PI * .6, Math.PI * 1.4)} step={12} r={3} /><circle cx={-8} cy={-96} r={8} /></>} />
+        <Leather id={k + '-m'} d={MONKEY_MASK} fill={L.monkeyFace} alpha={.86} cut={o.crown && <g transform={MONKEY_CROWN}><path d={crownPath(o.crown)} /></g>}
           holes={<>
             <path d={slitPath(22, -92, 54, -96, 10)} />
             {o.head === 'monkeyLaugh' && <path d="M40 -40 C52 -46 70 -50 78 -60 C74 -44 60 -30 42 -30 Z" />}
@@ -108,12 +104,12 @@ function headPart(o: Opts): Part {
           paint={<path d="M26 -108 Q42 -116 60 -104" fill="none" stroke={L.black} strokeWidth={5} />} />
         <Pupil x={40} y={-95} />
         {o.head === 'monkeyLaugh' && <Dots pts={[[50, -40], [60, -44], [70, -50]]} r={3} />}
-        {o.crown && crown(o.crown, k, -4)}
+        {o.crown && <g transform={MONKEY_CROWN}>{crown(o.crown, k, false)}</g>}
       </g>
     ) : (
       <g>
-        <Leather id={k + '-hair'} d={HAIR} fill={L.black} alpha={.88} holes={<DotLine pts={[[-40, -120], [-52, -60], [-44, 20]]} step={14} r={2.6} />} />
-        <Leather id={k + '-f'} d={FACE} fill={o.skin}
+        <Leather id={k + '-hair'} d={HAIR} fill={L.black} alpha={.88} cut={o.crown && <><path d={crownPath(o.crown)} /><path d={DISC} /></>} holes={<DotLine pts={[[-40, -120], [-52, -60], [-44, 20]]} step={14} r={2.6} />} />
+        <Leather id={k + '-f'} d={FACE} fill={o.skin} cut={o.crown && <><path d={crownPath(o.crown)} /><path d={DISC} /></>}
           holes={<>
             <path d={slitPath(10, -110, 46, -113, 8.5)} />
             <path d="M8 -110 C0 -108 -8 -104 -16 -104 C-8 -110 0 -112 8 -110 Z" />
@@ -231,7 +227,7 @@ export function humanoid(o: Opts): Part {
   };
 }
 
-export const RAM = humanoid({ name: 'ram', skin: L.ramTeal, dhoti: L.turmeric, hem: L.vermilion, sash: L.leaf, head: 'human', crown: 'tall', weapon: 'bow', quiver: true });
+export const RAM = humanoid({ name: 'ram', skin: L.ramBlue, dhoti: L.turmeric, hem: L.vermilion, sash: L.leaf, head: 'human', crown: 'tall', weapon: 'bow', quiver: true });
 export const LAKSHMAN = humanoid({ name: 'lakshman', skin: L.gold, dhoti: L.vermilion, hem: L.leaf, sash: L.indigo, head: 'human', crown: 'short', weapon: 'bow', quiver: true });
 export const HANUMAN = humanoid({ name: 'hanuman', skin: L.fur, fur: L.fur, dhoti: L.vermilion, hem: L.turmeric, sash: L.leaf, head: 'monkey', crown: 'cap', weapon: 'mace', tail: true, lower: 'langot' });
 export const VANAR = humanoid({ name: 'vanar', skin: L.vanar, fur: L.vanar, dhoti: L.leaf, hem: L.turmeric, sash: L.vermilion, head: 'monkey', tail: true, lower: 'langot' });

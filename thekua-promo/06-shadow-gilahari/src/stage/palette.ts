@@ -6,7 +6,7 @@ export const L = {
   leaf: '#2C7A30',
   maroon: '#6A1420',
   black: '#140C08',
-  ramTeal: '#12806F',       // Ram: blue-green
+  ramBlue: '#2F78DC',       // Ram: blue (lifted so it stays blue over the warm lamp light)
   gold: '#E2A447',          // Lakshman's golden skin
   fur: '#A0521A',           // Hanuman
   vanar: '#7A3C16',         // the other monkeys
@@ -30,3 +30,6 @@ export const STAGE = {
 export const TEXT_ZONES = {
   subtitle: { x: 118, y: 1586, w: 844, h: 250 },
 };
+
+// dyes that would turn muddy when multiplied over the warm screen get a normal-blend lift on top
+export const LIFT: Record<string, number> = { '#2F78DC': .42 };
