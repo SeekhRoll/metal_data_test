@@ -1,7 +1,8 @@
 // Renders promo.html frame-by-frame in headless Chromium and muxes with the soundtrack.
 //
 //   node render.js                 -> build/thekua-promo-dwarka.mp4 (1080x1920, 30 fps, 30 s)
-//   node render.js --stills 2.3,16 -> build/still-2.30.png ... (quick look at chosen moments)
+//   node render.js --stills 2.3,16 -> build/still-2.30.jpg ... (quick look at chosen moments)
+//   node render.js --page promo-cute.html --audio soundtrack_cute.wav --name thekua-promo-dwarka-cute
 //
 // Needs: playwright (global install is fine), ffmpeg (FFMPEG env or `pip install imageio-ffmpeg`).
 const http = require('http');
@@ -16,6 +17,10 @@ const { chromium } = req('playwright');
 
 const ROOT = __dirname, OUT = path.join(ROOT, 'build');
 const FPS = 30, DUR = 30;
+const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
+const PAGE = arg('--page', 'promo.html');                    // promo-cute.html for the hand-drawn cut
+const AUDIO = arg('--audio', 'soundtrack.wav');              // soundtrack_cute.wav for the hand-drawn cut
+const NAME = arg('--name', 'thekua-promo-dwarka');
 const FFMPEG = process.env.FFMPEG ||
   (() => { try { return execSync('python3 -c "import imageio_ffmpeg as i;print(i.get_ffmpeg_exe())"').toString().trim(); } catch { return 'ffmpeg'; } })();
 
@@ -30,7 +35,7 @@ const server = http.createServer((q, r) => {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   await new Promise(res => server.listen(0, res));
-  const url = `http://127.0.0.1:${server.address().port}/promo.html?capture`;
+  const url = `http://127.0.0.1:${server.address().port}/${PAGE}?capture`;
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 400, height: 700 } });
   page.on('console', m => console.log('[page]', m.text()));
@@ -49,8 +54,8 @@ const server = http.createServer((q, r) => {
     await browser.close(); server.close(); return;
   }
 
-  const wav = path.join(OUT, 'soundtrack.wav');
-  const mp4 = path.join(OUT, 'thekua-promo-dwarka.mp4');
+  const wav = path.join(OUT, AUDIO);
+  const mp4 = path.join(OUT, `${NAME}.mp4`);
   const ff = spawn(FFMPEG, [
     '-y', '-loglevel', 'error',
     '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',

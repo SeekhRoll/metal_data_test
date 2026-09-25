@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<title>Thekua Promo — Hand-drawn</title>
+<style>
+  @font-face { font-family: Baloo; src: url(fonts/Baloo2.ttf); font-weight: 400 800; }
+  @font-face { font-family: Kalam; src: url(fonts/Kalam-Bold.ttf); }
+  @font-face { font-family: Patrick; src: url(fonts/PatrickHand-Regular.ttf); }
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: 360px; height: 640px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ============================================================ EDIT ME
+const BRAND = 'Sri Desi Thekua';
+const PHONE = '+91 81782 26605';
+const AREA  = 'Dwarka, New Delhi';
+// ============================================================
+
+const W = 1080, H = 1920, CX = W / 2;
+const cv = document.getElementById('c');
+let ctx = cv.getContext('2d');   // swapped briefly when a character is drawn offscreen
+const INK = '#3d2618';
+
+// ---------- math
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOutCubic = k => 1 - Math.pow(1 - k, 3);
+const eInOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const eOutBack = k => { const c = 2.2; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+const eInCubic = k => k * k * k;
+const bounceOut = k => { const n = 7.5625, d = 2.75; if (k < 1 / d) return n * k * k; if (k < 2 / d) return n * (k -= 1.5 / d) * k + .75; if (k < 2.5 / d) return n * (k -= 2.25 / d) * k + .9375; return n * (k -= 2.625 / d) * k + .984375; };
+const pop = (t, a, d = .35) => eOutBack(seg(t, a, a + d));
+const hopAt = t => { const k = ((t % .5) + .5) % .5 / .5; return 4 * k * (1 - k); };   // one hop per beat
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hash(a, b) { let h = Math.imul((a | 0) * 374761393 + (b | 0) * 668265263, 1274126177); h ^= h >>> 13; h = Math.imul(h, 1103515245); return ((h ^ h >>> 16) >>> 0) / 4294967296; }
+function mixHex(a, b, k) { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], k))).join(',')})`; }
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+// ---------- line boil: outlines re-jitter 8x per second, like redrawn animation frames
+let BOIL = 0, T = 0;
+const jit = (i, amp = 2) => (hash(i, BOIL) - .5) * 2 * amp;
+
+// ============================================================ SKETCH PRIMITIVES
+function ellPts(cx, cy, rx, ry, seed = 1, o = {}) {
+  const n = o.n || 30, pts = [], wob = o.wob ?? 2.4;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2 + (o.a0 || 0), r = 1 + (o.bAmp || 0) * Math.sin(a * (o.bumps || 0));
+    pts.push([cx + Math.cos(a) * rx * r + jit(seed * 131 + i, wob), cy + Math.sin(a) * ry * r + jit(seed * 131 + i + 999, wob)]);
+  }
+  return pts;
+}
+// rounded rectangle via superellipse
+function boxPts(cx, cy, w, h, seed = 1, p = 5, n = 40) {
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    pts.push([cx + Math.sign(c) * Math.pow(Math.abs(c), 2 / p) * w / 2 + jit(seed * 71 + i, 2.2), cy + Math.sign(s) * Math.pow(Math.abs(s), 2 / p) * h / 2 + jit(seed * 71 + i + 500, 2.2)]);
+  }
+  return pts;
+}
+function poly(verts, seed = 1, per = 6) {
+  const pts = [];
+  verts.forEach((v, i) => { const w = verts[(i + 1) % verts.length]; for (let k = 0; k < per; k++) { const f = k / per; pts.push([lerp(v[0], w[0], f) + jit(seed * 37 + i * per + k, 1.6), lerp(v[1], w[1], f) + jit(seed * 37 + i * per + k + 777, 1.6)]); } });
+  return pts;
+}
+function closed(pts) {
+  ctx.beginPath(); const n = pts.length, m = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const s = m(pts[n - 1], pts[0]); ctx.moveTo(s[0], s[1]);
+  for (let i = 0; i < n; i++) { const p = pts[i], q = m(p, pts[(i + 1) % n]); ctx.quadraticCurveTo(p[0], p[1], q[0], q[1]); }
+  ctx.closePath();
+}
+function open(pts) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length - 1; i++) { const p = pts[i], q = pts[i + 1]; ctx.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2); }
+  const l = pts[pts.length - 1]; ctx.lineTo(l[0], l[1]);
+}
+// fill with crayon grain, then an ink outline
+function ink(pts, fill, lw = 6, o = {}) {
+  closed(pts);
+  if (fill) {
+    ctx.fillStyle = fill; ctx.fill();
+    if (o.tex !== false) { ctx.save(); ctx.globalAlpha *= .22; ctx.fillStyle = A.crayon; ctx.fill(); ctx.restore(); }
+  }
+  if (lw) { ctx.lineWidth = lw; ctx.strokeStyle = o.stroke || INK; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke(); }
+}
+function line(pts, lw = 6, color = INK, seed = 3) {
+  const p = pts.map(([x, y], i) => [x + jit(seed * 53 + i, 1.8), y + jit(seed * 53 + i + 300, 1.8)]);
+  open(p); ctx.lineWidth = lw; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+}
+function dot(x, y, r, color) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = color; ctx.fill(); }
+function shine(x, y, r, a0 = 3.6, a1 = 4.4, lw = 7) { ctx.beginPath(); ctx.arc(x, y, r, a0, a1); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke(); }
+
+function heart(x, y, s, color = '#ff7a8a', rot = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot + jit(x | 0, .04)); ctx.scale(s, s);
+  ctx.beginPath(); ctx.moveTo(0, 30); ctx.bezierCurveTo(-60, -10, -30, -55, 0, -22); ctx.bezierCurveTo(30, -55, 60, -10, 0, 30); ctx.closePath();
+  ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.lineJoin = 'round'; ctx.stroke();
+  shine(-16, -18, 10, 3.4, 4.4, 4);
+  ctx.restore();
+}
+function sparkle(x, y, s, color = '#ffd24a') {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(jit(x | 0, .1));
+  ctx.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? 12 : 40, a = i / 8 * Math.PI * 2; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath();
+  ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.restore();
+}
+function burstStars(seed, x, y, age, n = 10, dist = 260) {
+  if (age < 0 || age > .8) return;
+  const R = mulberry(seed), cols = ['#ffd24a', '#ff9aa2', '#8fd3ff', '#9be29b', '#ffb23f'];
+  for (let i = 0; i < n; i++) {
+    const a = R() * 7, d = dist * (.5 + R() * .6) * eOutCubic(age / .8), s = (.4 + R() * .5) * (1 - age / .8);
+    if (R() < .4) heart(x + Math.cos(a) * d, y + Math.sin(a) * d, s * .7, cols[i % 5]); else sparkle(x + Math.cos(a) * d, y + Math.sin(a) * d, s, cols[i % 5]);
+  }
+}
+function floatHearts(t, seed, x0, x1, y0, n = 8, rise = 500) {
+  const R = mulberry(seed);
+  for (let i = 0; i < n; i++) {
+    const cyc = 2 + R() * 1.5, ph = R() * cyc, k = ((t + ph) % cyc) / cyc;
+    const x = lerp(x0, x1, R()) + Math.sin(t * 2 + i) * 20, y = y0 - k * rise;
+    const s = (.35 + R() * .3) * Math.sin(k * Math.PI);
+    if (s > .02) heart(x, y, s, ['#ff7a8a', '#ff9aa2', '#ffb3c1'][i % 3]);
+  }
+}
+
+// ---------- faces
+function face(x, y, s, mood = 'happy', seed = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const blink = ((T + seed * .73) % 2.7) < .12;
+  ctx.fillStyle = 'rgba(255,120,140,.5)';
+  ctx.beginPath(); ctx.ellipse(-50, 16, 17, 10, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(50, 16, 17, 10, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  const eye = (ex, kind) => {
+    if (kind === 'open') {
+      ctx.beginPath(); ctx.ellipse(ex, -8, 10, 13, 0, 0, 7); ctx.fillStyle = INK; ctx.fill();
+      dot(ex + 3.5, -13, 4, '#fff'); dot(ex - 3, -3, 2, '#fff');
+    } else if (kind === 'arc') { ctx.beginPath(); ctx.arc(ex, -2, 11, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+    else if (kind === 'relax') { ctx.beginPath(); ctx.arc(ex, -12, 11, Math.PI * .15, Math.PI * .85); ctx.stroke(); }
+    else if (kind === 'gt') { const d = ex < 0 ? 1 : -1; ctx.beginPath(); ctx.moveTo(ex - 10 * d, -18); ctx.lineTo(ex + 8 * d, -8); ctx.lineTo(ex - 10 * d, 2); ctx.stroke(); }
+    else if (kind === 'star') { ctx.save(); ctx.translate(ex, -8); sparkle(0, 0, .45, '#ffd24a'); ctx.restore(); }
+  };
+  const E = { happy: ['open', 'open'], wink: ['open', 'arc'], relax: ['relax', 'relax'], squish: ['gt', 'gt'], joy: ['arc', 'arc'], wow: ['star', 'star'] }[mood] || ['open', 'open'];
+  eye(-28, blink && E[0] === 'open' ? 'arc' : E[0]); eye(28, blink && E[1] === 'open' ? 'arc' : E[1]);
+  if (mood === 'squish') { ctx.beginPath(); ctx.moveTo(-14, 18); for (let i = 0; i < 4; i++) ctx.lineTo(-14 + (i + 1) * 7, 18 + (i % 2 ? -5 : 5)); ctx.stroke(); }
+  else if (mood === 'wow' || mood === 'joy') {
+    ctx.beginPath(); ctx.moveTo(-16, 10); ctx.quadraticCurveTo(0, 42, 16, 10); ctx.closePath(); ctx.fillStyle = INK; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 24, 7, 5, 0, 0, 7); ctx.fillStyle = '#ff7a8a'; ctx.fill();
+  } else { ctx.beginPath(); ctx.arc(0, 8, 12, Math.PI * .15, Math.PI * .85); ctx.stroke(); }
+  ctx.restore();
+}
+
+// ============================================================ CHARACTERS (drawn around 0,0)
+const DOUGH = '#f8e8c6', GOLD = '#f2aa48';
+function thekua(o = {}) {
+  const done = o.done ?? 1, seed = o.seed || 1, col = mixHex(DOUGH, GOLD, done), ridge = `rgba(${lerp(190, 170, done)},${lerp(150, 90, done)},${lerp(100, 30, done)},.75)`;
+  if (o.arms) {
+    for (const s of [-1, 1]) {
+      const wv = o.wave && s === 1 ? Math.sin(T * 12) * 30 : Math.sin(T * 4 + s) * 6;
+      line([[s * 130, 10], [s * 175, -10 + wv * .5], [s * 205, -40 + wv]], 7, INK, seed + s);
+      ink(ellPts(s * 210, -46 + wv, 20, 20, seed + 5 + s, { n: 10 }), col, 5);
+    }
+  }
+  if (o.legs) for (const s of [-1, 1]) ink(ellPts(s * 55, 118, 26, 20, seed + 9 + s, { n: 12 }), mixHex('#e9cf9f', '#d98a35', done), 5);
+  const body = ellPts(0, 0, 165, 128, seed, { n: 48, bumps: 22, bAmp: .035, wob: 1.8 });
+  ink(body, col, 7);
+  ctx.save(); closed(body); ctx.clip();
+  // mould ridges round the rim, face stays clear
+  for (let i = 0; i < 17; i++) {
+    const a = Math.PI + i / 16 * Math.PI, ex = Math.cos(a) * 170, ey = Math.sin(a) * 132;
+    line([[ex, ey], [ex * .62, ey * .55 + 20]], 6, ridge, seed * 7 + i);
+  }
+  for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; dot(Math.cos(a) * 140, Math.sin(a) * 106, 4.5, ridge); }
+  const R = mulberry(seed);
+  for (let i = 0; i < 9; i++) { ctx.save(); ctx.translate((R() - .5) * 220, (R() - .2) * 140); ctx.rotate(R() * 7); ctx.beginPath(); ctx.ellipse(0, 0, 8, 3, 0, 0, 7); ctx.fillStyle = 'rgba(120,120,40,.7)'; ctx.fill(); ctx.restore(); }
+  ctx.restore();
+  closed(body); ctx.lineWidth = 7; ctx.strokeStyle = INK; ctx.stroke();
+  shine(-40, -30, 90, 3.7, 4.3, 8);
+  if (!o.noFace) face(0, 20, 1, o.mood || 'happy', seed);
+}
+
+function doughBall(o = {}) {
+  ink(ellPts(0, 0, 150, 140, o.seed || 4, { n: 30 }), DOUGH, 7);
+  shine(-30, -30, 90, 3.7, 4.4, 8);
+  const R = mulberry(3); for (let i = 0; i < 7; i++) { ctx.save(); ctx.translate((R() - .5) * 200, (R() - .5) * 180); ctx.rotate(R() * 7); ctx.beginPath(); ctx.ellipse(0, 0, 8, 3, 0, 0, 7); ctx.fillStyle = 'rgba(120,120,40,.6)'; ctx.fill(); ctx.restore(); }
+  face(0, 15, 1, o.mood || 'happy', 4);
+}
+
+function attaSack() {
+  ink(boxPts(0, 20, 300, 320, 11, 3.2), '#f6e8cf', 7);
+  ink(ellPts(0, -160, 80, 42, 12, { n: 16 }), '#f6e8cf', 7);
+  line([[-60, -128], [0, -118], [60, -128]], 9, '#c98b4a', 13);
+  ctx.save(); ctx.font = '700 64px Kalam'; ctx.textAlign = 'center'; ctx.fillStyle = '#c98b4a'; ctx.fillText('आटा', 0, 135); ctx.restore();
+  shine(-60, -10, 110, 3.5, 4.1, 8);
+  face(0, 10, 1, 'happy', 11);
+}
+function gudCube() {
+  ink(poly([[-140, -80], [0, -150], [140, -80], [140, 110], [0, 170], [-140, 110]], 40), '#c9763a', 7);
+  ink(poly([[-140, -80], [0, -150], [140, -80], [0, -20]], 41), '#e39a58', 6);
+  line([[0, -20], [0, 170]], 6, INK, 42);
+  const R = mulberry(5); for (let i = 0; i < 12; i++) dot((R() - .5) * 220, 20 + (R() - .5) * 180, 3 + R() * 3, 'rgba(255,230,180,.8)');
+  face(-70, 55, .75, 'joy', 21);
+}
+function gheeKatori() {
+  ink(ellPts(0, 0, 190, 120, 31, { n: 30, a0: 0 }).map(([x, y]) => [x, Math.max(y, -20 + jit(x | 0, 1))]), '#f4c95d', 7);
+  ink(ellPts(0, -20, 190, 50, 32, { n: 30 }), '#ffe27a', 7);
+  shine(-60, -30, 60, 3.6, 4.4, 7);
+  // drop above
+  const dy = -170 + Math.sin(T * 5) * 12;
+  ctx.beginPath(); ctx.moveTo(0, dy - 60); ctx.quadraticCurveTo(38, dy, 0, dy + 34); ctx.quadraticCurveTo(-38, dy, 0, dy - 60); ctx.fillStyle = '#ffd84d'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
+  dot(-10, dy + 2, 6, '#fff');
+  face(0, 45, .9, 'happy', 31);
+}
+function coconut() {
+  ink(ellPts(0, 0, 160, 150, 41, { n: 30 }), '#8b5a34', 7);
+  const R = mulberry(41);
+  for (let i = 0; i < 26; i++) { const a = R() * 7, d = 60 + R() * 80; line([[Math.cos(a) * d, Math.sin(a) * d], [Math.cos(a + .15) * (d + 22), Math.sin(a + .15) * (d + 22)]], 4, '#c08a5c', 400 + i); }
+  for (const [x, y] of [[-18, -108], [18, -108], [0, -84]]) dot(x, y, 9, '#4a2a14');
+  ctx.save(); ctx.scale(1, 1); ctx.fillStyle = '#fff4e0'; ctx.beginPath(); ctx.ellipse(0, 25, 92, 64, 0, 0, 7); ctx.fill(); ctx.restore();
+  face(0, 22, .95, 'happy', 41);
+}
+function elaichi() {
+  ctx.save(); ctx.rotate(-.12);
+  ink(ellPts(0, 0, 175, 105, 51, { n: 30, bumps: 2, bAmp: .06 }), '#9ccb6b', 7);
+  line([[-150, -30], [-60, -62], [60, -62], [150, -30]], 4, 'rgba(60,90,30,.6)', 52);
+  shine(-40, -20, 90, 3.8, 4.4, 7);
+  face(0, 28, .9, 'wink', 51);
+  ctx.restore();
+  // tiny saunf buddies orbiting
+  for (let i = 0; i < 3; i++) {
+    const a = T * 2.4 + i * 2.1, x = Math.cos(a) * 250, y = Math.sin(a) * 90 - 40 - hopAt(T + i * .17) * 30;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(a) * .5);
+    ink(ellPts(0, 0, 38, 16, 60 + i, { n: 12, wob: 1 }), '#c5c268', 4);
+    dot(-8, -2, 3.5, INK); dot(8, -2, 3.5, INK);
+    ctx.restore();
+  }
+}
+const FRIENDS = [attaSack, gudCube, gheeKatori, coconut, elaichi];
+
+function chaiCup() {
+  for (let i = 0; i < 3; i++) { const x = -40 + i * 40; line(Array.from({ length: 6 }, (_, k) => [x + Math.sin(T * 4 + k + i) * 12, -150 - k * 24]), 5, 'rgba(61,38,24,.45)', 70 + i); }
+  ctx.beginPath(); ctx.arc(120, 0, 44, -1.2, 1.2); ctx.lineWidth = 16; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 8; ctx.strokeStyle = '#8fd3ff'; ctx.stroke();
+  ink(poly([[-120, -110], [120, -110], [100, 110], [-100, 110]], 7), '#8fd3ff', 7);
+  ink(ellPts(0, -110, 120, 26, 77, { n: 20 }), '#c98b4a', 6);
+  shine(-40, -10, 70, 3.8, 4.3, 7);
+  face(0, 10, .85, 'joy', 77);
+}
+
+function diya(x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const fl = Math.sin(T * 14) * 5;
+  ctx.beginPath(); ctx.moveTo(-18, -50); ctx.quadraticCurveTo(-24, -100, fl, -140); ctx.quadraticCurveTo(24, -100, 18, -50); ctx.quadraticCurveTo(0, -38, -18, -50);
+  ctx.fillStyle = '#ffb23f'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, -75, 8, 16, 0, 0, 7); ctx.fillStyle = '#fff3a0'; ctx.fill();
+  ink(poly([[-110, -40], [110, -40], [70, 30], [-70, 30]], x | 0), '#e0754a', 6);
+  dot(-40, -10, 6, '#ffd24a'); dot(0, -6, 6, '#ffd24a'); dot(40, -10, 6, '#ffd24a');
+  ctx.restore();
+}
+
+function marigold(x, y, s, seed) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ink(ellPts(0, 0, 50, 50, seed, { n: 24, bumps: 12, bAmp: .12 }), seed % 2 ? '#ff8a3d' : '#ffb23f', 5);
+  ink(ellPts(0, 0, 26, 26, seed + 3, { n: 14, bumps: 8, bAmp: .15 }), seed % 2 ? '#ff6f2e' : '#ff9a2e', 4, { tex: false });
+  ctx.restore();
+}
+
+// ============================================================ TEXT
+function sticker(str, x, y, size, fill, o = {}) {
+  const a = o.alpha ?? 1; if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.rotate((o.rot || 0) + jit((o.seed || 7) * 3, .012));
+  const s = o.scale ?? 1; ctx.scale(s, s);
+  ctx.font = `${o.weight || 800} ${size}px Baloo`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  const th = o.thin ? .45 : 1;
+  ctx.lineWidth = size * .30 * (o.thin ? .7 : 1); ctx.strokeStyle = o.halo || '#fffaf0'; ctx.strokeText(str, 0, 0);
+  ctx.fillStyle = INK; ctx.lineWidth = size * .09 * th; ctx.strokeStyle = INK;
+  ctx.fillText(str, size * .04 * th, size * .055 * th); ctx.strokeText(str, size * .04 * th, size * .055 * th);
+  ctx.fillStyle = fill; ctx.fillText(str, 0, 0);
+  ctx.lineWidth = size * .065 * th; ctx.strokeText(str, 0, 0); ctx.fillText(str, 0, 0);
+  ctx.restore();
+}
+function hand(str, x, y, size, color = INK, o = {}) {
+  const a = o.alpha ?? 1; if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.rotate((o.rot || 0) + jit((o.seed || 5) * 7, .01)); ctx.scale(o.scale ?? 1, o.scale ?? 1);
+  ctx.font = `${o.weight || ''} ${size}px ${o.fam || 'Patrick'}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+  if (o.halo) { ctx.lineWidth = size * .22; ctx.strokeStyle = o.halo; ctx.lineJoin = 'round'; ctx.strokeText(str, 0, 0); }
+  ctx.fillText(str, 0, 0);
+  ctx.restore();
+}
+
+// ============================================================ BACKGROUNDS
+function paper(color) { ctx.fillStyle = color; ctx.fillRect(0, 0, W, H); }
+function polka(color, t, gap = 120, r = 12) {
+  ctx.fillStyle = color; const off = (t * 30) % gap;
+  for (let y = -gap; y < H + gap; y += gap) for (let x = -gap; x < W + gap; x += gap) {
+    const sx = x + off + ((y / gap) % 2 ? gap / 2 : 0); ctx.beginPath(); ctx.arc(sx, y + off, r, 0, 7); ctx.fill();
+  }
+}
+function sunburst(x, y, t, c1, c2, n = 18) {
+  paper(c1); ctx.save(); ctx.translate(x, y); ctx.rotate(t * .15); ctx.fillStyle = c2;
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 2200, a, a + Math.PI / n); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+
+// ============================================================ SCENES
+// S1 0-2: Dwarka doodle skyline, Blue Line metro rolls by
+const BLD = (() => { const R = mulberry(8), a = [], cols = ['#ffd7ba', '#cde7f0', '#f9e1a8', '#e2d4f0', '#c9e8c4', '#ffc4c9']; let x = 20; while (x < W) { const w = 150 + R() * 90; a.push({ x, w, h: 330 + R() * 330, c: cols[a.length % cols.length], tank: R() < .7 }); x += w + 12; } return a; })();
+function skyline(t, grow = 1) {
+  const G = 1530;
+  // sun
+  ctx.save(); ctx.translate(880, 260); ctx.rotate(t * .5);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; line([[Math.cos(a) * 120, Math.sin(a) * 120], [Math.cos(a) * 160, Math.sin(a) * 160]], 8, '#ffb23f', 90 + i); }
+  ctx.restore();
+  ink(ellPts(880, 260, 95, 95, 91), '#ffd24a', 7); face(880, 270, .8, 'happy', 9);
+  // clouds
+  for (let i = 0; i < 3; i++) { const x = ((i * 420 + t * 40) % 1500) - 200, y = 300 + i * 130; ink(ellPts(x, y, 110, 45, 100 + i, { n: 18, bumps: 5, bAmp: .12 }), '#ffffff', 5); }
+  // buildings (Dwarka societies with water tanks)
+  BLD.forEach((b, i) => {
+    const k = pop(t, .05 + i * .06, .4) * grow; if (k <= 0) return;
+    const h = b.h * k;
+    ctx.save(); ctx.translate(b.x + b.w / 2, G);
+    ink(boxPts(0, -h / 2, b.w, h, 200 + i, 8), b.c, 6);
+    if (b.tank && k > .9) ink(boxPts(-b.w * .2, -h - 22, 50, 44, 300 + i, 4, 16), '#8fb0c9', 5);
+    for (let yy = -h + 40; yy < -60; yy += 64) for (let xx = -b.w / 2 + 28; xx < b.w / 2 - 20; xx += 48) {
+      ctx.fillStyle = hash(i * 99 + xx, yy | 0) < .35 ? '#ffe08a' : 'rgba(255,255,255,.75)'; ctx.fillRect(xx - 12, yy - 14, 24, 28);
+      ctx.strokeStyle = 'rgba(61,38,24,.5)'; ctx.lineWidth = 2.5; ctx.strokeRect(xx - 12, yy - 14, 24, 28);
+    }
+    ctx.restore();
+  });
+  // elevated metro track + pillars
+  const TY = 1180;
+  for (let x = 100; x < W; x += 260) ink(boxPts(x, (TY + G) / 2 + 20, 44, G - TY - 30, 500 + x, 6, 20), '#c9d1da', 5);
+  ink(boxPts(CX, TY, W + 80, 46, 600, 8), '#b8c2cc', 6);
+  // train
+  const tx = lerp(-1150, 1350, seg(t, .5, 2.0));
+  for (let c = 0; c < 3; c++) {
+    const x = tx - c * 330;
+    ctx.save(); ctx.translate(x, TY - 78);
+    ink(boxPts(0, 0, 310, 110, 700 + c, 6), '#f4f7fb', 6);
+    ctx.fillStyle = '#3f7fd0'; ctx.fillRect(-150, 26, 300, 16);
+    for (let wx = -110; wx <= 110; wx += 72) { ctx.fillStyle = '#bfe3ff'; ctx.fillRect(wx - 24, -30, 48, 36); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(wx - 24, -30, 48, 36); }
+    if (c === 0) { ink(ellPts(150, 0, 30, 50, 710, { n: 14 }), '#3f7fd0', 5); face(110, -4, .45, 'joy', 3); }
+    ctx.restore();
+  }
+  // ground + trees
+  ink(boxPts(CX, G + 220, W + 100, 460, 800, 6), '#bfe6a8', 7);
+  for (let i = 0; i < 6; i++) {
+    const x = 70 + i * 190, k = pop(t, .3 + i * .05);
+    ctx.save(); ctx.translate(x, G + 40); ctx.scale(k, k);
+    line([[0, 0], [0, -70]], 12, '#9a6a3e', 820 + i);
+    ink(ellPts(0, -110, 62, 58, 830 + i, { n: 16, bumps: 6, bAmp: .08 }), i % 2 ? '#7cc576' : '#96d68a', 6);
+    ctx.restore();
+  }
+}
+function scene1(t) {
+  paper('#dff1fb'); polka('rgba(255,255,255,.55)', t, 140, 10);
+  skyline(t);
+  const k1 = pop(t, .35, .4);
+  sticker('Hello Dwarka!', CX, 560, 140, '#ff8a3d', { scale: k1, alpha: clamp(k1 * 3), seed: 1, rot: -.04 });
+  const k2 = pop(t, 1.0, .4);
+  sticker('कुछ मीठा हो जाए?', CX, 720, 96, '#ff7a8a', { scale: k2, alpha: clamp(k2 * 3), seed: 2, rot: .03 });
+}
+
+// S2 2-4: mascot drops in, title
+function scene2(t) {
+  const lt = t - 2;
+  sunburst(CX, 1050, t, '#fff1d6', '#ffe0b8');
+  const fall = bounceOut(seg(lt, 0, .7)), y = lerp(-300, 1060, fall);
+  const land = Math.exp(-Math.max(0, lt - .27) * 9) * (lt > .27);
+  const sx = 1 + .18 * land, sy = 1 - .18 * land;
+  ctx.save(); ctx.translate(CX, y + 128 * (1 - sy)); ctx.scale(1.55 * sx, 1.55 * sy);
+  ctx.fillStyle = 'rgba(61,38,24,.12)'; ctx.beginPath(); ctx.ellipse(0, 150 + (1060 - y) / 1.55, 150 * fall, 22 * fall, 0, 0, 7); ctx.fill();
+  thekua({ arms: true, legs: true, wave: lt > .8, mood: lt > 1.0 && lt < 1.35 ? 'wink' : 'happy', seed: 2 });
+  ctx.restore();
+  burstStars(21, CX, 1000, lt - .27, 12, 420);
+  const k = pop(t, 2.15, .45);
+  sticker('ठेकुआ', CX, 390, 250, '#ffb23f', { scale: k, alpha: clamp(k * 3), rot: -.03, seed: 3 });
+  hand('by ' + BRAND, CX, 585, 66, INK, { alpha: seg(t, 2.5, 2.8), fam: 'Kalam', rot: -.02 });
+  const k3 = pop(t, 2.7, .4);
+  sticker('बिहार का असली स्वाद', CX, 1470, 84, '#ff8a3d', { scale: k3, alpha: clamp(k3 * 3), seed: 4 });
+  hand('अब आपके द्वारका में ♥', CX, 1590, 66, INK, { alpha: seg(t, 3.0, 3.3), fam: 'Kalam' });
+  floatHearts(t, 5, 150, 930, 1800, 6);
+}
+
+// S3 4-9: ingredient friends, one per beat-pair; earlier ones wait on the shelf
+const ING = [
+  { hi: 'गेहूँ का आटा', en: 'whole wheat atta', bg: '#ffe9c7' },
+  { hi: 'गुड़', en: 'pure jaggery', bg: '#ffd9c2' },
+  { hi: 'देसी घी', en: 'desi ghee', bg: '#fff1b8' },
+  { hi: 'नारियल', en: 'fresh coconut', bg: '#d9f2e0' },
+  { hi: 'सौंफ · इलायची', en: 'fennel & cardamom', bg: '#e8e0f7' },
+];
+const SHELF_Y = 1640, shelfX = i => CX + (i - 2) * 200;
+function shelfFriend(i, t, s = .42) {
+  ctx.save(); ctx.translate(shelfX(i), SHELF_Y - hopAt(t + i * .1) * 26); ctx.scale(s, s); FRIENDS[i](); ctx.restore();
+}
+function scene3(t) {
+  if (t >= 9) return sceneBowl(t);
+  const i = Math.min(4, Math.floor(t - 4)), lt = t - 4 - i;
+  paper(ING[i].bg); polka('rgba(255,255,255,.6)', t, 120, 14);
+  // shelf
+  line([[40, SHELF_Y + 80], [W - 40, SHELF_Y + 80]], 10, '#c98b4a', 900);
+  for (let j = 0; j < i; j++) shelfFriend(j, t);
+  // big friend hops in
+  const k = eOutBack(seg(lt, 0, .4)), hop = hopAt(t) * 30 * seg(lt, .4, .5);
+  const squash = 1 + .12 * Math.exp(-Math.max(0, lt - .25) * 12) * (lt > .25);
+  ctx.save(); ctx.translate(CX, 1080 + (1 - k) * 700 - hop); ctx.scale(1.35 * squash, 1.35 / squash);
+  FRIENDS[i](); ctx.restore();
+  // hop down to the shelf at the end of the beat-pair
+  // labels
+  ctx.save(); ctx.translate(CX, 250); const bk = pop(t, 4 + i, .3); ctx.scale(bk, bk);
+  ink(ellPts(0, 0, 50, 50, 950 + i, { n: 16 }), '#fffaf0', 6); ctx.restore();
+  hand(`${i + 1}`, CX, 255, 64, INK, { alpha: clamp(bk), fam: 'Baloo', scale: bk });
+  const k2 = pop(t, 4 + i + .05, .35);
+  sticker(ING[i].hi, CX, 430, ING[i].hi.length > 8 ? 120 : 150, '#ff8a3d', { scale: k2, alpha: clamp(k2 * 3), seed: 10 + i, rot: (i % 2 ? .03 : -.03) });
+  hand(ING[i].en, CX, 580, 70, INK, { alpha: seg(lt, .15, .35), rot: -.02 });
+}
+
+// 9-10: friends dive into the parat, dough buddy pops out
+function sceneBowl(t) {
+  const lt = t - 9;
+  sunburst(CX, 1300, t, '#ffe4ea', '#ffd0db');
+  // bowl back
+  ink(ellPts(CX, 1300, 420, 90, 960, { n: 30 }), '#e0a93f', 7);
+  const dk = eOutBack(seg(lt, .5, .85));
+  if (dk > 0) { ctx.save(); ctx.translate(CX, 1250 - dk * 150); ctx.scale(1.1 * dk, 1.1 * dk); doughBall({ mood: 'joy' }); ctx.restore(); }
+  // bowl front rim
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 1300, W, 600); ctx.clip();
+  ink(ellPts(CX, 1300, 470, 230, 961, { n: 34 }), '#f4c95d', 8); shine(CX - 150, 1330, 250, 2.2, 2.7, 10);
+  ctx.restore();
+  line([[CX - 470, 1300], [CX + 470, 1300]], 8, INK, 962);
+  for (let i = 0; i < 5; i++) {
+    const k = eInOut(seg(lt, i * .06, i * .06 + .45)); if (k >= 1) continue;
+    const x = lerp(CX + (i - 2) * 200, CX + (i - 2) * 40, k), y = lerp(1000, 1260, k) - Math.sin(k * Math.PI) * 350;
+    const sc = .55 * (1 - eInCubic(k));
+    ctx.save(); ctx.translate(x, y); ctx.rotate(k * 5 * (i % 2 ? 1 : -1)); ctx.scale(sc, sc); FRIENDS[i](); ctx.restore();
+  }
+  burstStars(91, CX, 1250, lt - .5, 14, 420);
+  const k = pop(t, 9.05, .35);
+  sticker('प्यार से गूँधा', CX, 420, 140, '#ff7a8a', { scale: k, alpha: clamp(k * 3), seed: 20 });
+  hand('kneaded with love ♥', CX, 570, 70, INK, { alpha: seg(t, 9.25, 9.45) });
+}
+
+// S4 10-12.5: sancha press
+function mitten(x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ink(boxPts(10, -260, 230, 190, 1001, 4), '#ff9aa2', 7);
+  line([[-100, -180], [120, -180]], 6, '#fffaf0', 1005);
+  ink(ellPts(-120, -40, 55, 90, 1002, { n: 16 }), '#f5c9a3', 7);
+  ink(ellPts(0, 0, 150, 190, 1003, { n: 26 }), '#f5c9a3', 7);
+  for (const dx of [-50, 0, 50]) line([[dx, 150], [dx, 90]], 5, 'rgba(61,38,24,.5)', 1004 + dx);
+  ctx.restore();
+}
+function sancha(y) {
+  ink(boxPts(CX, y, 720, 600, 1010, 4), '#c98b55', 8);
+  for (let i = 0; i < 5; i++) line([[CX - 320, y - 240 + i * 120], [CX - 200, y - 250 + i * 120 + 10], [CX + 320, y - 240 + i * 120]], 4, 'rgba(61,38,24,.3)', 1011 + i);
+  ink(ellPts(CX, y, 290, 225, 1020, { n: 34, bumps: 22, bAmp: .03 }), '#a06a3e', 7);
+  for (let i = 0; i < 11; i++) { const a = Math.PI + i / 10 * Math.PI; line([[CX + Math.cos(a) * 270, y + Math.sin(a) * 205], [CX + Math.cos(a) * 170, y + Math.sin(a) * 110 + 20]], 5, 'rgba(61,38,24,.35)', 1030 + i); }
+}
+function scene4(t) {
+  if (t >= 12.5) return sceneFry(t);
+  const lt = t - 10;
+  paper('#ffe9c7'); polka('rgba(255,255,255,.6)', t, 120, 14);
+  const lift = eInOut(seg(lt, 1.5, 2.3)), by = 1180 + lift * 900;
+  sancha(by);
+  // hand presses twice
+  const press = x => Math.max(eOutCubic(seg(lt, x - .12, x)) * (1 - eInOut(seg(lt, x + .15, x + .3))), 0);
+  const p = Math.max(press(.5), press(1.0));
+  const sq = Math.max(Math.exp(-Math.max(0, lt - .5) * 7) * (lt > .5 && lt < 1.0), Math.exp(-Math.max(0, lt - 1.0) * 7) * (lt > 1.0));
+  if (lt < .5) {
+    const k = bounceOut(seg(lt, 0, .45));
+    ctx.save(); ctx.translate(CX, lerp(500, 1170, k)); ctx.scale(.95, .95); doughBall({ mood: 'happy' }); ctx.restore();
+  } else if (lt < 1.0) {
+    ctx.save(); ctx.translate(CX, 1180); ctx.scale(1.15 + .25 * sq, .8 - .2 * sq); doughBall({ mood: 'squish' }); ctx.restore();
+  } else {
+    const up = eOutBack(seg(lt, 1.35, 1.8));
+    ctx.save(); ctx.translate(CX, lerp(1180, 1060, up)); ctx.scale((1.55 + .3 * sq) * (1 + .12 * up), (1.55 - .3 * sq) * (1 + .12 * up)); ctx.rotate(Math.sin(lt * 6) * .04 * up);
+    thekua({ done: 0, mood: sq > .3 ? 'squish' : up > .5 ? 'joy' : 'happy', arms: up > .5, legs: false, wave: up > .8, seed: 3 });
+    ctx.restore();
+    burstStars(41, CX, 1060, lt - 1.4, 12, 460);
+  }
+  if (p > 0) mitten(CX, lerp(-300, 1000, p), 1.2);
+  const k = pop(t, 10.1, .35), k2 = pop(t, 10.5, .35);
+  sticker('हाथ से बना,', CX, 330, 120, '#ff8a3d', { scale: k, alpha: clamp(k * 3), seed: 30, rot: -.03 });
+  sticker('साँचे में ढला', CX, 470, 120, '#ff8a3d', { scale: k2, alpha: clamp(k2 * 3), seed: 31, rot: .02 });
+  hand('hand-pressed in a wooden sancha', CX, 600, 58, INK, { alpha: seg(t, 11.0, 11.3) });
+}
+
+// 12.5-15: hot-tub kadhai
+function sceneFry(t) {
+  const lt = t - 12.5;
+  paper('#ffd9c2'); polka('rgba(255,255,255,.5)', t, 120, 14);
+  const ky = 1180;
+  for (const s of [-1, 1]) ink(ellPts(CX + s * 510, ky, 60, 36, 1100 + s, { n: 14 }), '#5a5a66', 7);
+  ink(ellPts(CX, ky, 480, 440, 1102, { n: 36 }), '#5a5a66', 8);
+  ink(ellPts(CX, ky, 410, 370, 1103, { n: 36 }), '#ffd66b', 6);
+  shine(CX - 80, ky - 60, 300, 3.6, 4.2, 10);
+  const done = eInOut(seg(lt, .3, 2.0));
+  const P = [[-160, -140, 3], [170, -80, 5], [0, 170, 7]];
+  P.forEach(([dx, dy, sd], i) => {
+    ctx.save(); ctx.translate(CX + dx + Math.sin(t * 2 + i) * 10, ky + dy + Math.cos(t * 1.7 + i) * 8); ctx.rotate(Math.sin(t * 1.5 + i) * .08); ctx.scale(.78, .78);
+    thekua({ done, mood: done > .95 ? 'joy' : 'relax', seed: sd });
+    ctx.restore();
+  });
+  // bubbles
+  const R = mulberry(61);
+  for (let i = 0; i < 40; i++) {
+    const cyc = .6 + R() * .6, age = ((t + R() * cyc) % cyc) / cyc, a = R() * 7, d = 120 + R() * 250;
+    ctx.beginPath(); ctx.arc(CX + Math.cos(a) * d, ky + Math.sin(a) * d * .9, 6 + 16 * age, 0, 7);
+    ctx.strokeStyle = `rgba(61,38,24,${.5 * (1 - age)})`; ctx.lineWidth = 4; ctx.stroke();
+  }
+  // sweat drop
+  ctx.save(); ctx.translate(CX + 250, ky - 190 + ((t * 60) % 30)); ctx.beginPath(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(18, 0, 0, 14); ctx.quadraticCurveTo(-18, 0, 0, -24); ctx.fillStyle = '#8fd3ff'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke(); ctx.restore();
+  // steam squiggles
+  for (let i = 0; i < 4; i++) line(Array.from({ length: 6 }, (_, k) => [CX - 240 + i * 160 + Math.sin(t * 4 + k + i) * 14, ky - 480 - k * 26]), 6, 'rgba(61,38,24,.35)', 1110 + i);
+  [['Golden!', 13.0, 270, 290, -.08, '#ffb23f'], ['Crispy!', 13.5, 740, 410, .07, '#ff8a3d'], ['Perfect!', 14.0, 380, 540, -.04, '#ff7a8a']].forEach(([w, a, x, y, r, c], i) => {
+    const k = pop(t, a, .3); sticker(w, x, y, 118, c, { scale: k, alpha: clamp(k * 3), rot: r, seed: 40 + i });
+  });
+  hand('देसी घी में धीमी आँच पर तला', CX, 1780, 60, INK, { alpha: seg(t, 12.7, 13.0), fam: 'Kalam' });
+}
+
+// S5 15-18.5 hero plate; 18.5-20 crunch
+function leafAndPlate(x, y, s, t, faces = true) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.save(); ctx.rotate(-.35);
+  ink(ellPts(0, 0, 560, 250, 1200, { n: 40 }), '#8ccb6e', 8);
+  line([[-560, 0], [560, 0]], 8, '#c8e8a8', 1201);
+  for (let i = -4; i <= 4; i++) { line([[i * 110, 0], [i * 110 - 90, -200]], 4, 'rgba(61,110,40,.5)', 1210 + i); line([[i * 110, 0], [i * 110 - 90, 200]], 4, 'rgba(61,110,40,.5)', 1230 + i); }
+  ctx.restore();
+  ink(ellPts(0, 0, 400, 400, 1250, { n: 40 }), '#f4c95d', 8);
+  ink(ellPts(0, 0, 330, 330, 1251, { n: 40 }), '#f8d77a', 5);
+  shine(-40, -40, 330, 3.6, 4.2, 12);
+  const moods = ['happy', 'relax', 'joy', 'wink', 'happy', 'relax'];
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2 + .3; ctx.save(); ctx.translate(Math.cos(a) * 205, Math.sin(a) * 195); ctx.rotate(Math.sin(t * 2 + i) * .06); ctx.scale(.5, .5);
+    thekua({ mood: moods[i], seed: 10 + i, noFace: !faces }); ctx.restore();
+  }
+  ctx.save(); ctx.translate(0, -hopAt(t) * 16); ctx.scale(.72, .72); thekua({ mood: 'joy', arms: true, wave: true, seed: 2, noFace: !faces }); ctx.restore();
+  ctx.restore();
+}
+function biteThekua(s) {
+  const c = A.tmp, g = c.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
+  const main = ctx; ctx = g;
+  g.translate(c.width / 2, c.height / 2); thekua({ noFace: true, seed: 6 }); g.setTransform(1, 0, 0, 1, 0, 0);
+  ctx = main;
+  g.globalCompositeOperation = 'destination-out';
+  const bites = [[150, -70, 58], [185, -5, 55], [150, 60, 50]];
+  bites.forEach(([x, y, r]) => { g.beginPath(); g.arc(c.width / 2 + x, c.height / 2 + y, r, 0, 7); g.fill(); });
+  g.globalCompositeOperation = 'source-over';
+  ctx.save(); ctx.scale(s, s); ctx.drawImage(c, -c.width / 2, -c.height / 2);
+  ctx.lineWidth = 7; ctx.strokeStyle = INK; ctx.lineCap = 'round';
+  bites.forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(x, y, r, Math.PI * .55, Math.PI * 1.45); ctx.stroke(); });
+  ctx.restore();
+}
+function scene5(t) {
+  if (t < 18.5) {
+    sunburst(CX, 1150, t, '#fff1d6', '#ffe4c4');
+    const k = eOutBack(seg(t, 15, 15.45));
+    leafAndPlate(CX, 1150, 1.05 * k, t);
+    diya(150, 1780, .8); diya(W - 150, 1790, .8);
+    floatHearts(t, 7, 150, 930, 1500, 9);
+    const k1 = pop(t, 15.3, .35), k2 = pop(t, 16.0, .35);
+    sticker('बाहर से कुरकुरा,', CX, 290, 112, '#ff8a3d', { scale: k1, alpha: clamp(k1 * 3), seed: 50, rot: -.03 });
+    sticker('अंदर से नरम', CX, 430, 112, '#ff7a8a', { scale: k2, alpha: clamp(k2 * 3), seed: 51, rot: .03 });
+    hand('crunchy outside, soft inside', CX, 560, 62, INK, { alpha: seg(t, 16.6, 16.9) });
+  } else {
+    const lt = t - 18.5;
+    paper('#ffe27a');
+    ctx.save(); ctx.translate(CX, 1060); ctx.rotate(jit(1, .02));
+    for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; line([[Math.cos(a) * 420, Math.sin(a) * 420], [Math.cos(a) * 1300, Math.sin(a) * 1300]], 10, 'rgba(255,255,255,.7)', 1300 + i); }
+    ctx.beginPath(); for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2, r = i % 2 ? 330 : 470; ctx.lineTo(Math.cos(a) * r + jit(i, 6), Math.sin(a) * r + jit(i + 40, 6)); } ctx.closePath();
+    ctx.fillStyle = '#fff4c2'; ctx.fill(); ctx.lineWidth = 8; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.restore();
+    const shake = Math.exp(-lt * 8) * 14 * Math.sin(lt * 80);
+    ctx.save(); ctx.translate(CX + shake, 1060); ctx.rotate(-.08); biteThekua(1.35 * (1 + .1 * Math.exp(-lt * 10))); ctx.restore();
+    const R = mulberry(19);
+    for (let i = 0; i < 22; i++) {
+      const a = -.9 + (R() - .5) * 1.6, sp = 500 + R() * 700, age = lt;
+      const x = CX + 220 + Math.cos(a) * sp * age, y = 1000 + Math.sin(a) * sp * age + 900 * age * age;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(age * 8 + i); ink(ellPts(0, 0, 14 + R() * 12, 11 + R() * 8, 1400 + i, { n: 8, wob: 1.5 }), GOLD, 4, { tex: false }); ctx.restore();
+    }
+    const k = pop(t, 18.52, .3);
+    sticker('CRUNCH!', CX, 380, 190, '#ff6b4a', { scale: k * (1 + .06 * Math.sin(lt * 30) * Math.exp(-lt * 4)), alpha: clamp(k * 3), rot: -.08, seed: 60 });
+    hand('हर बाइट में प्यार ♥', CX, 1690, 76, INK, { alpha: seg(t, 18.9, 19.2), fam: 'Kalam' });
+  }
+}
+
+// S6 20-25: promise sticky notes, then scooter delivery across Dwarka
+function icon(kind) {
+  if (kind === 'home') {
+    ink(poly([[-90, -10], [0, -90], [90, -10], [70, -10], [70, 80], [-70, 80], [-70, -10]], 1500), '#ff8a3d', 6);
+    ink(boxPts(0, 45, 44, 70, 1520, 6, 16), '#fff4e0', 5); heart(0, -35, .45, '#ff7a8a');
+  } else if (kind === 'ghee') {
+    ctx.beginPath(); ctx.moveTo(0, -95); ctx.quadraticCurveTo(80, 10, 0, 70); ctx.quadraticCurveTo(-80, 10, 0, -95); ctx.fillStyle = '#ffd84d'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
+    face(0, 20, .55, 'joy', 8);
+  } else if (kind === 'nochem') {
+    ink(boxPts(0, 10, 90, 130, 1530, 4), '#cde7f0', 6); ink(boxPts(0, -70, 44, 34, 1531, 4, 16), '#8fb0c9', 5);
+    ctx.lineWidth = 12; ctx.strokeStyle = '#ff5a5a'; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(0, 0, 100, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-70, -70); ctx.lineTo(70, 70); ctx.stroke();
+  } else if (kind === 'fresh') {
+    ink(boxPts(0, 10, 170, 150, 1540, 5), '#fffaf0', 6); ctx.fillStyle = '#ff7a8a'; ctx.fillRect(-82, -64, 164, 36); ctx.strokeStyle = INK; ctx.lineWidth = 5; ctx.strokeRect(-82, -64, 164, 36);
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) dot(-54 + c * 36, 5 + r * 38, 7, r === 1 && c === 2 ? '#ff8a3d' : 'rgba(61,38,24,.35)');
+    sparkle(95, -80, .6);
+  }
+}
+const NOTES = [
+  { x: 290, y: 590, c: '#ffe27a', r: -.06, icon: 'home', hi: '100% घर का बना', en: 'homemade' },
+  { x: 790, y: 640, c: '#ffc4c9', r: .05, icon: 'ghee', hi: 'शुद्ध देसी घी', en: 'pure desi ghee' },
+  { x: 290, y: 1010, c: '#bde3f5', r: .04, icon: 'nochem', hi: 'कोई केमिकल नहीं', en: 'no preservatives' },
+  { x: 790, y: 1060, c: '#c9e8c4', r: -.05, icon: 'fresh', hi: 'हर हफ़्ते ताज़ा', en: 'fresh every week' },
+];
+function scooter(x, y, t) {
+  ctx.save(); ctx.translate(x, y);
+  for (let i = 0; i < 3; i++) line([[-260 - i * 40, -60 + i * 40], [-180 - i * 40, -60 + i * 40]], 6, 'rgba(61,38,24,.4)', 1600 + i);
+  ink(boxPts(-150, -150, 120, 110, 1610, 4), '#ff8a3d', 6); heart(-150, -150, .5, '#fff4e0');
+  ctx.save(); ctx.translate(-10, -170); ctx.scale(.42, .42); thekua({ mood: 'joy', arms: true, wave: true, seed: 2 }); ctx.restore();
+  ink(poly([[-200, -80], [120, -80], [150, -10], [-190, -10]], 1620), '#7fd1b9', 7);
+  line([[110, -80], [140, -200], [100, -210]], 8, INK, 1640);
+  for (const wx of [-140, 110]) { ink(ellPts(wx, 0, 44, 44, 1650 + wx, { n: 16 }), '#5a5a66', 7); dot(wx, 0, 12, '#d6d6de'); }
+  ctx.restore();
+}
+function scene6(t) {
+  const lt = t - 20, i = Math.min(4, Math.floor(lt));
+  paper('#fffaf0');
+  ctx.strokeStyle = 'rgba(120,170,220,.35)'; ctx.lineWidth = 2;
+  for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const kt = pop(t, 20, .35);
+  sticker('हमारा वादा', CX, 200, 130, '#ff7a8a', { scale: kt, alpha: clamp(kt * 3), seed: 70 });
+  hand('our promise to you', CX, 320, 60, INK, { alpha: seg(t, 20.2, 20.5) });
+  NOTES.forEach((n, j) => {
+    const k = eOutBack(seg(lt, j, j + .3)); if (k <= 0) return;
+    ctx.save(); ctx.translate(n.x, n.y); ctx.rotate(n.r); ctx.scale(lerp(1.6, 1, k), lerp(1.6, 1, k)); ctx.globalAlpha = clamp(k * 3);
+    ctx.fillStyle = 'rgba(61,38,24,.15)'; ctx.fillRect(-200, -175, 420, 380);
+    ink(boxPts(0, 0, 420, 380, 1700 + j, 9), n.c, 6);
+    ctx.save(); ctx.rotate(-n.r * 2); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(-70, -205, 140, 44); ctx.restore();
+    ctx.save(); ctx.translate(0, -60); ctx.scale(.85, .85); icon(n.icon); ctx.restore();
+    ctx.restore();
+    hand(n.hi, n.x, n.y + 80, n.hi.length > 12 ? 50 : 56, INK, { alpha: clamp(k * 3), rot: n.r, fam: 'Baloo', weight: 800, seed: 80 + j });
+    hand(n.en, n.x, n.y + 138, 44, INK, { alpha: clamp(k * 3), rot: n.r });
+  });
+  if (lt >= 4) {
+    const k = pop(t, 24, .3);
+    sticker('पूरे द्वारका में डिलीवरी!', CX, 1320, 76, '#ff8a3d', { scale: k, alpha: clamp(k * 3), seed: 90 });
+    ctx.fillStyle = '#b8c2cc'; ctx.fillRect(0, 1560, W, 120); line([[0, 1560], [W, 1560]], 6, INK, 1800); line([[0, 1680], [W, 1680]], 6, INK, 1801);
+    for (let x = 30; x < W; x += 140) { ctx.fillStyle = '#fff'; ctx.fillRect(x, 1614, 70, 12); }
+    ['Sec 6', 'Sec 10', 'Sec 12', 'Sec 19', 'Sec 23'].forEach((s, j) => {
+      const sk = pop(t, 24.05 + j * .08, .25), x = 110 + j * 215;
+      ctx.save(); ctx.translate(x, 1545); ctx.scale(sk, sk); line([[0, 0], [0, -70]], 7, INK, 1810 + j);
+      ink(boxPts(0, -95, 150, 56, 1820 + j, 6, 24), '#9be29b', 5); ctx.restore();
+      ctx.save(); ctx.translate(x, 1450); ctx.scale(sk, sk); ctx.font = '700 36px Baloo'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = INK; ctx.fillText(s, 0, 2); ctx.restore();
+    });
+    scooter(lerp(-300, 1400, seg(t, 24.0, 25.0)), 1640, t);
+    hand('home delivery · sectors 1–29', CX, 1790, 60, INK, { alpha: seg(t, 24.2, 24.4) });
+  }
+}
+
+// S7 25-30: end card
+function scene7(t) {
+  const lt = t - 25;
+  sunburst(CX, 900, t, '#fff4e0', '#ffe9cc', 22);
+  // garland
+  const gk = eOutBack(seg(lt, 0, .5));
+  ctx.save(); ctx.translate(0, -(1 - gk) * 300);
+  for (let s = 0; s < 3; s++) for (let i = 0; i <= 8; i++) { const k = i / 8, x = lerp(s * W / 3, (s + 1) * W / 3, k), y = 40 + Math.sin(k * Math.PI) * 110 + Math.sin(t * 2 + s) * 5 * Math.sin(k * Math.PI); marigold(x, y, .75, s * 10 + i); }
+  ctx.restore();
+  const k0 = pop(t, 25.1, .45);
+  sticker('ठेकुआ', CX, 380, 230, '#ffb23f', { scale: k0, alpha: clamp(k0 * 3), seed: 100, rot: -.03 });
+  const k1 = pop(t, 25.35, .35);
+  sticker(BRAND, CX, 560, 100, '#ff7a8a', { thin: true, scale: k1, alpha: clamp(k1 * 3), seed: 101, rot: .02 });
+  hand('homemade · ' + AREA, CX, 665, 54, INK, { alpha: seg(t, 25.6, 25.9) });
+  // whatsapp button
+  const kb = pop(t, 25.8, .4) * (1 + .03 * Math.sin(lt * Math.PI * 4) * seg(lt, 1.3, 1.5));
+  ctx.save(); ctx.translate(CX, 820); ctx.scale(kb, kb); ctx.globalAlpha = clamp(kb * 3); ctx.rotate(-.015);
+  ctx.fillStyle = INK; closed(boxPts(8, 10, 740, 130, 1900, 6)); ctx.fill();
+  ink(boxPts(0, 0, 740, 130, 1901, 6), '#3dd17a', 7);
+  ink(ellPts(-300, 0, 38, 38, 1902, { n: 14 }), '#ffffff', 6, { tex: false });
+  ctx.beginPath(); ctx.moveTo(-330, 24); ctx.lineTo(-345, 50); ctx.lineTo(-312, 36); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.stroke();
+  dot(-300, 0, 12, '#3dd17a');
+  ctx.restore();
+  sticker('Order on WhatsApp', CX + 45, 824, 60, '#ffffff', { scale: kb, alpha: clamp(kb * 3), seed: 102, rot: -.015, halo: 'rgba(0,0,0,0)', thin: true });
+  const kn = pop(t, 26.1, .35);
+  sticker(PHONE, CX, 975, 86, '#ffb23f', { scale: kn, alpha: clamp(kn * 3), seed: 103, weight: 800, thin: true });
+  hand('छठ स्पेशल · चाय के साथ परफ़ेक्ट', CX, 1090, 58, INK, { alpha: seg(t, 26.4, 26.7), fam: 'Kalam' });
+  // mascot + chai buddy
+  const km = eOutBack(seg(lt, .3, .8)), kc = eOutBack(seg(lt, .5, 1.0));
+  ctx.fillStyle = 'rgba(61,38,24,.12)'; ctx.beginPath(); ctx.ellipse(CX, 1690, 420, 40, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(CX - 170, 1480 + (1 - km) * 700 - hopAt(t) * 20); ctx.scale(1.0, 1.0); thekua({ arms: true, legs: true, wave: true, mood: lt > 3 && lt < 3.4 ? 'wink' : 'joy', seed: 2 }); ctx.restore();
+  ctx.save(); ctx.translate(CX + 240, 1540 + (1 - kc) * 700 - hopAt(t + .25) * 20); ctx.scale(.95, .95); chaiCup(); ctx.restore();
+  floatHearts(t, 9, CX - 120, CX + 120, 1420, 5, 200);
+  diya(110, 1830, .6); diya(W - 110, 1830, .6);
+  burstStars(111, CX, 400, lt, 14, 480);
+  burstStars(112, CX, 820, lt - 3, 12, 460);
+}
+
+// ============================================================ TIMELINE
+const CUTS = [2, 4, 5, 6, 7, 8, 9, 10, 12.5, 15, 18.5, 20, 25, 28];
+
+function render(t) {
+  T = t; BOIL = Math.floor(t * 8);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+  let punch = 0;
+  for (const c of CUTS) if (t >= c && t < c + .3) punch = Math.max(punch, Math.sin((t - c) / .3 * Math.PI) * .03);
+  ctx.save(); ctx.translate(CX, H / 2); ctx.scale(1 + punch, 1 + punch); ctx.translate(-CX, -H / 2);
+  if (t < 2) scene1(t);
+  else if (t < 4) scene2(t);
+  else if (t < 10) scene3(t);
+  else if (t < 15) scene4(t);
+  else if (t < 20) scene5(t);
+  else if (t < 25) scene6(t);
+  else scene7(t);
+  ctx.restore();
+  // paper grain over everything + soft vignette
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(A.paper, 0, 0, W, H); ctx.restore();
+  // quick white "page flip" wipe on scene changes
+  for (const c of [2, 4, 9, 10, 12.5, 15, 18.5, 20, 25]) if (t >= c && t < c + .18) { ctx.fillStyle = `rgba(255,250,240,${.6 * (1 - (t - c) / .18)})`; ctx.fillRect(0, 0, W, H); }
+  const fade = Math.max(1 - seg(t, 0, .2), seg(t, 29.6, 30));
+  if (fade > 0) { ctx.fillStyle = `rgba(255,250,240,${fade})`; ctx.fillRect(0, 0, W, H); }
+}
+
+// ============================================================ ASSETS
+const A = {};
+function makeCrayon() {
+  const c = mk(256, 256), g = c.getContext('2d'), R = mulberry(77);
+  for (let i = 0; i < 1400; i++) {
+    const x = R() * 256, y = R() * 256, l = 6 + R() * 16;
+    g.strokeStyle = R() < .55 ? `rgba(255,255,255,${.3 + R() * .5})` : `rgba(80,40,10,${.15 + R() * .3})`;
+    g.lineWidth = .8 + R() * 1.4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y - l * .6); g.stroke();
+  }
+  return ctx.createPattern(c, 'repeat');
+}
+function makePaper() {
+  const w = 540, h = 960, c = mk(w, h), g = c.getContext('2d'), id = g.createImageData(w, h), R = mulberry(5);
+  for (let i = 0; i < id.data.length; i += 4) { const v = 238 + R() * 17; id.data[i] = v; id.data[i + 1] = v - 2; id.data[i + 2] = v - 8; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0);
+  for (let i = 0; i < 260; i++) { g.strokeStyle = `rgba(150,120,90,${R() * .12})`; g.lineWidth = .6; g.beginPath(); const x = R() * w, y = R() * h; g.moveTo(x, y); g.quadraticCurveTo(x + R() * 20, y + R() * 20, x + R() * 30 - 15, y + R() * 30 - 15); g.stroke(); }
+  const v = g.createRadialGradient(w / 2, h / 2, h * .35, w / 2, h / 2, h * .75);
+  v.addColorStop(0, 'rgba(255,255,255,0)'); v.addColorStop(1, 'rgba(200,170,140,.35)');
+  g.fillStyle = v; g.fillRect(0, 0, w, h);
+  return c;
+}
+
+async function init() {
+  await Promise.all([
+    document.fonts.load('800 100px Baloo', 'ठेकुआ Hello'), document.fonts.load('700 100px Baloo', 'Sec'),
+    document.fonts.load('100px Kalam', 'आटा'), document.fonts.load('100px Patrick', 'hello'),
+  ]);
+  A.crayon = makeCrayon();
+  A.paper = makePaper();
+  A.tmp = mk(560, 460);
+  window.READY = true;
+}
+window.frameJPEG = (t, q = .93) => { render(t); return cv.toDataURL('image/jpeg', q); };
+init();
+if (!/[?&]capture/.test(location.search)) {
+  const t0 = performance.now();
+  const loop = () => { if (window.READY) render(((performance.now() - t0) / 1000) % 30); requestAnimationFrame(loop); };
+  loop();
+}
+</script>
+</body>
+</html>
