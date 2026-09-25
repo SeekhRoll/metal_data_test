@@ -1,8 +1,8 @@
 """Final assembly (brief §3.1: FFmpeg for the mux).
 
 1. Reads the subtitle cues from src/film/timeline.ts and writes assets/subtitles/subs.srt.
-2. Places each VO line assets/vo/cue-NN.wav (if present) at its cue, gently time-fitting lines that run
-   long (max 12% faster), and ducks the music under the voice.
+2. Places each VO line assets/vo/cue-NN.wav as laid out by scripts/fit_vo.py (assets/vo/placement.json:
+   start time and a small common tempo), and ducks the music under the voice.
 3. Muxes out/film-silent.mp4 + the mix into output/ (full quality, 720p WhatsApp copy, poster).
 
     python3 scripts/mix.py
@@ -71,13 +71,17 @@ def main():
     music = np.pad(music, ((0, max(0, n - len(music))), (0, 0)))[:n]
     vo = np.zeros((n, 2), np.float32)
     have_vo = 0
-    for i, (a, b, _) in enumerate(cs):
-        p = os.path.join(ROOT, f"assets/vo/cue-{i:02d}.wav")
+    place = json.load(open(os.path.join(ROOT, "assets/vo/placement.json")))
+    for pl in place:
+        p = os.path.join(ROOT, "assets/vo", pl["id"] + ".wav")
         if not os.path.exists(p):
             continue
-        nxt = cs[i + 1][0] if i + 1 < len(cs) else 60.0
-        x = fit(p, max(b, nxt - .1) - a)
-        s = int(a * SR)
+        if pl["tempo"] > 1.001:
+            tmp = os.path.join(ROOT, "out", pl["id"] + ".tempo.wav")
+            subprocess.run([FF, "-y", "-loglevel", "error", "-i", p, "-filter:a", f"atempo={pl['tempo']:.3f}", "-ar", str(SR), tmp], check=True)
+            p = tmp
+        x = read_wav(p)
+        s = int(pl["at"] * SR)
         x = x[:n - s]
         vo[s:s + len(x)] += x
         have_vo += 1
@@ -86,7 +90,7 @@ def main():
     k = int(.25 * SR)
     env = np.convolve(env > .02, np.ones(k) / k, mode="same")
     duck = 1 - .55 * np.clip(env * 1.5, 0, 1)
-    mix = music * (duck[:, None] if have_vo else 1.0) + vo * 1.0
+    mix = music * .8 * (duck[:, None] if have_vo else 1.0) + vo * 2.2
     mix /= max(1.0, np.abs(mix).max() / .95)
     os.makedirs(os.path.join(ROOT, "out"), exist_ok=True)
     wav = os.path.join(ROOT, "out/mix.wav")
