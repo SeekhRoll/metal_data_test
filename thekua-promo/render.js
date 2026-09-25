@@ -48,7 +48,7 @@ function ff(args) {
   fs.mkdirSync(OUT, { recursive: true });
   await new Promise(res => server.listen(0, res));
   const url = `http://127.0.0.1:${server.address().port}/${CONCEPT}/promo.html?capture`;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });   // WebGL2 for painterly concepts
   const page = await browser.newPage({ viewport: { width: 400, height: 700 } });
   page.on('console', m => console.log('[page]', m.text()));
   page.on('pageerror', e => console.error('[page error]', e.message));
