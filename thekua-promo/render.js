@@ -73,7 +73,7 @@ function ff(args) {
     '-y', '-loglevel', 'error',
     '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
     ...(fs.existsSync(wav) ? ['-i', wav, '-c:a', 'aac', '-b:a', '192k'] : []),
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p',
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-maxrate', '16M', '-bufsize', '32M', '-pix_fmt', 'yuv420p',   // cap keeps painterly concepts under GitHub's 100 MB
     '-profile:v', 'high', '-movflags', '+faststart', '-t', String(DUR), mp4,
   ], { stdio: ['pipe', 'inherit', 'inherit'] });
 
