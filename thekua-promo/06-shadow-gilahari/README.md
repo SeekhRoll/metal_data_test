@@ -2,7 +2,7 @@
 
 This is a 60 s, 9:16, 24 fps Tholu Bommalata (Andhra leather shadow puppetry) story film, sponsored by Sri Desi Thekua. It is built with **Remotion + SVG** following the brief.
 
-## Status: waiting for stage and puppet approval (brief §3.5, steps 1–2)
+## Status: crowns redrawn, rig test done (brief §3.5, steps 1–3); scenes next. `stills/rig-test.mp4` shows the walk, the mace swing and the pendulum settle. The narration needs Hugging Face access (see below).
 
 | Still | What to review |
 |---|---|
@@ -22,3 +22,12 @@ Next, after approval: the rig test (a walk, and a swing with pendulum settle), t
 npm install
 node scripts/stills.mjs      # re-render the review stills
 ```
+
+## Narration
+
+`scripts/vo.py` voices each line in `src/film/vo.json` with AI4Bharat Indic Parler-TTS, using a deep, smooth,
+reverential male storyteller voice. The model is gated on Hugging Face, so it needs:
+
+1. A Hugging Face account that has accepted the model's terms at https://huggingface.co/ai4bharat/indic-parler-tts (access is granted automatically).
+2. A read token stored in the environment as `HF_TOKEN`.
+3. Network access to Hugging Face's download hosts: `huggingface.co` and `*.hf.co` (model files are served from `cdn-lfs.hf.co`, `cas-bridge.xethub.hf.co`, `cas-server.xethub.hf.co` and `us.aws.cdn.hf.co`).
