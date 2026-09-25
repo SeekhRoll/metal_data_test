@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<title>Van Gogh Dussehra</title>
+<style>
+  @font-face { font-family: Tiro; src: url(../fonts/TiroDevanagariHindi-Regular.ttf); }
+  @font-face { font-family: Fraunces; src: url(../fonts/Fraunces-Italic.ttf); font-style: italic; font-weight: 100 900; }
+  @font-face { font-family: Fraunces; src: url(../fonts/Fraunces.ttf); font-style: normal; font-weight: 100 900; }
+  @font-face { font-family: Poppins; src: url(../fonts/Poppins-SemiBold.ttf); font-weight: 600; }
+  html, body { margin: 0; background: #000; }
+  canvas#c { display: block; width: 360px; height: 640px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ============================================================ EDIT ME
+const BRAND = 'Sri Desi Thekua';
+const PHONE = '+91 81782 26605';
+const AREA  = 'Dwarka, New Delhi';
+// ============================================================
+//
+// Van Gogh Dussehra. How the painting works:
+//  1. Each frame the scene is drawn as a soft colour study (REF) plus a "direction map" (DIR)
+//     that says how brush strokes should lie there: swirl with the sky, follow contours, a fixed
+//     angle, or radial/concentric around a centre (moon, stars, fireworks, flowers).
+//  2. WebGL repaints the frame with ~150k textured brush strokes. Strokes are anchored in world
+//     space and move with the camera (no boiling); sky strokes are carried round slow vortices.
+//     Each stroke picks its colour from REF, with Van Gogh style broken-colour jitter and impasto.
+//  3. Scene changes are painted over stroke by stroke (per-stroke dissolve), never cut.
+
+const W = 1080, H = 1920, CX = W / 2, CY = H / 2;
+const RW = 540, RH = 960;           // colour study resolution
+const DW = 270, DH = 480;           // direction map resolution
+const out = document.getElementById('c'), octx = out.getContext('2d');
+
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = k => 1 - Math.pow(1 - k, 3);
+const eInOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const sm = k => k * k * (3 - 2 * k);
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+// ============================================================ CAMERA (one smooth spline for the whole film)
+const KEYS = [
+  [0.0, 540, -1650, 1.00], [1.2, 540, -1620, 1.00], [6.0, 540, 250, 1.00], [10.8, 540, 140, 1.22],
+  [12.4, 470, 330, 1.05], [14.0, 470, 320, 1.05], [15.4, 540, 40, 1.12], [17.2, 540, -80, 1.06],
+  [21.6, 540, -350, 1.00], [30.0, 540, -350, 1.05],
+];
+function camAt(t) {
+  // monotone cubic (Fritsch-Carlson) per component: smooth, no overshoot
+  const n = KEYS.length, out = [];
+  let i = 0; while (i < n - 2 && t > KEYS[i + 1][0]) i++;
+  for (let c = 1; c <= 3; c++) {
+    const xs = KEYS.map(k => k[0]), ys = KEYS.map(k => k[c]);
+    const d = [], m = [];
+    for (let k = 0; k < n - 1; k++) d.push((ys[k + 1] - ys[k]) / (xs[k + 1] - xs[k]));
+    m[0] = 0; m[n - 1] = 0;
+    for (let k = 1; k < n - 1; k++) m[k] = d[k - 1] * d[k] <= 0 ? 0 : 3 * (xs[k + 1] - xs[k - 1]) / ((2 * xs[k + 1] - xs[k] - xs[k - 1]) / d[k - 1] + (xs[k + 1] - 2 * xs[k] + xs[k - 1]) / d[k]);
+    const tt = clamp(t, xs[0], xs[n - 1]), h = xs[i + 1] - xs[i], s = (tt - xs[i]) / h;
+    const h00 = 2 * s ** 3 - 3 * s ** 2 + 1, h10 = s ** 3 - 2 * s ** 2 + s, h01 = -2 * s ** 3 + 3 * s ** 2, h11 = s ** 3 - s ** 2;
+    out.push(h00 * ys[i] + h10 * h * m[i] + h01 * ys[i + 1] + h11 * h * m[i + 1]);
+  }
+  return { x: out[0], y: out[1], z: out[2] };
+}
+
+// ============================================================ PAINT PASSES
+// every scene primitive is drawn twice: colour ('c') into REF, stroke direction ('d') into DIR.
+// DIR encoding: R = mode (0 fixed angle, 128 follow contours, 255 swirl with the sky), G = angle/180, B = stroke size (128 = 1x)
+let PASS = 'c', g = null;
+function dirStyle(mode, ang = 0, size = 1) {
+  const R = mode === 'f' ? 255 : mode === 'g' ? 128 : 0;
+  const G = Math.round((((ang % 180) + 180) % 180) / 180 * 255), B = Math.round(clamp(size, .3, 2) * 127.5);
+  return `rgb(${R},${G},${B})`;
+}
+function conicDir(x, y, kind, size = 1) {           // 'rad' strokes point away from centre, 'tan' go round it
+  const cg = g.createConicGradient(kind === 'tan' ? -Math.PI / 2 : 0, x, y), B = Math.round(size * 127.5);
+  cg.addColorStop(0, `rgb(0,0,${B})`); cg.addColorStop(.4999, `rgb(0,255,${B})`); cg.addColorStop(.5, `rgb(0,0,${B})`); cg.addColorStop(1, `rgb(0,255,${B})`);
+  return cg;
+}
+const st = (col, dir) => PASS === 'c' ? col : dir;          // pick style for the current pass
+const C = PASS_ONLY => PASS === 'c';
+function grad(x0, y0, x1, y1, stops) { const q = g.createLinearGradient(x0, y0, x1, y1); stops.forEach((c, i) => q.addColorStop(i / (stops.length - 1), c)); return q; }
+function radial(x, y, r0, r1, stops) { const q = g.createRadialGradient(x, y, r0, x, y, r1); stops.forEach((c, i) => q.addColorStop(i / (stops.length - 1), c)); return q; }
+function ell(x, y, rx, ry, style, rot = 0) { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, 7); g.fillStyle = style; g.fill(); }
+function glowC(x, y, r, rgb, a) { if (PASS !== 'c') return; g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = radial(x, y, 0, r, [`rgba(${rgb},${a})`, `rgba(${rgb},${a * .3})`, `rgba(${rgb},0)`]); g.fillRect(x - r, y - r, 2 * r, 2 * r); g.restore(); }
+function lineC(pts, w, col) { if (PASS !== 'c') return; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) g.lineTo(p[0], p[1]); g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); }
+
+// ============================================================ THE DUSSEHRA WORLD
+const HORIZON = 300;
+const VORT = [[400, -1250, 430, .11], [860, -700, 300, -.09], [240, -1950, 360, .1], [720, -300, 260, .07]];
+const STARS = [[180, -2150], [520, -2320], [960, -2060], [110, -1470], [600, -1520], [330, -980], [990, -1220], [150, -600], [470, -760], [1010, -450]];
+const MOON = [830, -1660];
+const BURSTS = [[16.3, 780, -1050], [17.0, 300, -1300], [17.7, 640, -1550], [18.4, 180, -850], [19.1, 900, -1400], [19.8, 470, -1150], [20.5, 760, -800], [21.2, 260, -1600], [21.9, 620, -950]];
+const BURST_COLS = [['#ffd23a', '#ff8c1a', '#fff3b0'], ['#ffe066', '#e84a2a', '#fff'], ['#9fe07a', '#ffd23a', '#f4f1c0'], ['#ff9ec0', '#ffd23a', '#fff'], ['#ffd23a', '#ffffff', '#ff7b1a']];
+
+function sky(t, heat) {
+  g.fillStyle = st(grad(0, -2600, 0, HORIZON, ['#07154a', '#10297a', '#1e4a9c', '#2f6fb6', '#4f8fc0', '#e7a24a']), dirStyle('f'));
+  g.fillRect(-400, -2700, 1900, 3000);
+  if (PASS === 'c') {
+    // swirl bands, rotating with the same angular speed that carries the strokes
+    VORT.forEach(([x, y, R, s], i) => {
+      for (let k = 0; k < 4; k++) {
+        const r = R * (.35 + k * .22), a0 = s * Math.exp(-(r * r) / (R * R)) * t + i * 1.7 + k;
+        g.beginPath(); g.arc(x, y, r, a0, a0 + Math.PI * (1.1 + .2 * k));
+        g.strokeStyle = ['rgba(120,170,230,.55)', 'rgba(200,220,235,.45)', 'rgba(235,225,150,.45)', 'rgba(90,140,210,.5)'][k]; g.lineWidth = 34 - k * 4; g.lineCap = 'round'; g.stroke();
+      }
+    });
+    // the long rolling wave across the sky
+    g.beginPath(); for (let x = -400; x <= 1500; x += 20) { const y = -1080 + Math.sin(x * .006 + t * .3) * 90; x === -400 ? g.moveTo(x, y) : g.lineTo(x, y); }
+    g.strokeStyle = 'rgba(190,215,235,.5)'; g.lineWidth = 60; g.stroke();
+    if (heat > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = radial(540, 0, 50, 1500, [`rgba(255,120,30,${.55 * heat})`, `rgba(255,90,20,${.2 * heat})`, 'rgba(255,90,20,0)']); g.fillRect(-400, -1600, 1900, 1900); g.restore(); }
+  }
+  // moon + halo
+  const [mx, my] = MOON;
+  g.beginPath(); g.arc(mx, my, 240, 0, 7); g.fillStyle = st(radial(mx, my, 90, 240, ['#f2d15a', '#e2cf6e', '#bfd08a', 'rgba(110,160,190,.0)']), conicDir(mx, my, 'tan', .9)); g.fill();
+  ell(mx, my, 95, 95, st(radial(mx - 20, my - 20, 10, 100, ['#fff4b0', '#f6c83a', '#e69a24']), conicDir(mx, my, 'tan', .7)));
+  // stars
+  STARS.forEach(([x, y], i) => {
+    const tw = 1 + .08 * Math.sin(t * 2 + i);
+    g.beginPath(); g.arc(x, y, 72 * tw, 0, 7); g.fillStyle = st(radial(x, y, 10, 72 * tw, ['#fffbe0', '#f1e68a', '#c9dc9a', 'rgba(120,170,210,0)']), conicDir(x, y, 'tan', .7)); g.fill();
+    ell(x, y, 16, 16, st('#fffdf0', conicDir(x, y, 'rad', .5)));
+  });
+}
+
+function skyline() {
+  const R = mulberry(21); let x = -380;
+  while (x < 1480) {
+    const w = 70 + R() * 110, h = 60 + R() * 170, c = ['#27306e', '#323b86', '#1f2a5c', '#3b3f8f'][Math.floor(R() * 4)];
+    g.fillStyle = st(c, dirStyle('g', 90)); g.fillRect(x, 320 - h, w, h + 20);
+    if (PASS === 'c') for (let yy = 320 - h + 14; yy < 300; yy += 26) for (let xx = x + 10; xx < x + w - 14; xx += 24) if (R() < .45) { g.fillStyle = '#f7d24a'; g.fillRect(xx, yy, 11, 13); }
+    x += w + 6;
+  }
+  // temple shikhara, the Starry Night spire
+  g.beginPath(); g.moveTo(760, 330); g.lineTo(790, 150); g.lineTo(820, 40); g.lineTo(850, 150); g.lineTo(880, 330); g.closePath(); g.fillStyle = st('#2a2f6a', dirStyle('g', 90)); g.fill();
+  if (PASS === 'c') { g.fillStyle = '#e8622a'; g.beginPath(); g.moveTo(820, 40); g.lineTo(820, -10); g.lineTo(860, 5); g.lineTo(820, 18); g.fill(); }
+}
+
+function cypress(t) {
+  const sway = Math.sin(t * .8) * 10;
+  g.save(); g.translate(-150, 0); g.scale(.78, 1);
+  g.beginPath(); g.moveTo(-40, 1500);
+  const pts = [];
+  for (let k = 0; k <= 26; k++) { const u = k / 26, y = lerp(1500, -1150, u), wv = Math.sin(u * 23) * 16 + Math.sin(u * 7 + 1) * 10; pts.push([150 + (1 - u) * 90 + wv + sway * u, y]); }
+  pts.forEach(p => g.lineTo(p[0], p[1]));
+  g.lineTo(60 + sway, -1250);
+  for (let k = 26; k >= 0; k--) { const u = k / 26, y = lerp(1500, -1150, u), wv = Math.sin(u * 19 + 2) * 16; g.lineTo(-10 - (1 - u) * 60 + wv + sway * u, y); }
+  g.closePath();
+  g.fillStyle = st(grad(0, -1200, 200, 1500, ['#29523a', '#16362a', '#1d4431', '#0f261d']), dirStyle('g', 92, 1.1)); g.fill();
+  if (PASS === 'c') for (let k = 0; k < 18; k++) { const u = k / 18, y = lerp(1400, -1050, u); g.beginPath(); g.moveTo(40 + Math.sin(k) * 30, y); g.quadraticCurveTo(90, y - 90, 70 + Math.cos(k) * 30, y - 180); g.strokeStyle = k % 2 ? 'rgba(90,140,90,.6)' : 'rgba(40,80,70,.7)'; g.lineWidth = 16; g.stroke(); }
+  g.restore();
+}
+
+function ferrisWheel(t) {
+  const cx = 960, cy = 120, R = 230, a0 = t * .25;
+  g.beginPath(); g.arc(cx, cy, R + 60, 0, 7); g.fillStyle = st('rgba(0,0,0,0)', conicDir(cx, cy, 'tan', .8)); g.fill();
+  lineC([[cx - 120, 330], [cx, cy], [cx + 120, 330]], 14, '#6b3b2a');
+  for (let k = 0; k < 12; k++) { const a = a0 + k * Math.PI / 6; lineC([[cx, cy], [cx + Math.cos(a) * R, cy + Math.sin(a) * R]], 6, '#c9853a'); }
+  if (PASS === 'c') { g.beginPath(); g.arc(cx, cy, R, 0, 7); g.strokeStyle = '#d99a3a'; g.lineWidth = 12; g.stroke(); }
+  for (let k = 0; k < 12; k++) { const a = a0 + k * Math.PI / 6, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R; ell(x, y + 22, 26, 22, st(['#d9432a', '#2f6fd0', '#e8b62a', '#3a9a5a'][k % 4], dirStyle('g', 0, .7))); glowC(x, y, 50, '255,210,120', .5); }
+}
+
+function bulbs(t) {
+  if (PASS !== 'c') return;
+  for (const [y0, sag] of [[360, 70], [430, 50]]) {
+    g.beginPath(); for (let x = -380; x <= 1480; x += 20) { const u = ((x + 380) % 460) / 460, y = y0 + Math.sin(u * Math.PI) * sag; x === -380 ? g.moveTo(x, y) : g.lineTo(x, y); }
+    g.strokeStyle = 'rgba(30,20,40,.8)'; g.lineWidth = 3; g.stroke();
+    for (let x = -370; x <= 1480; x += 46) { const u = ((x + 380) % 460) / 460, y = y0 + Math.sin(u * Math.PI) * sag + 8; const c = ['#ffd84a', '#ff7a3a', '#fff0a0', '#6fe0ff'][(x / 46 | 0) & 3]; g.fillStyle = c; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); glowC(x, y, 34, '255,220,140', .45 * (.7 + .3 * Math.sin(t * 4 + x))); }
+  }
+}
+
+function crowd(t, heat, cheer) {
+  const R = mulberry(5);
+  g.fillStyle = st(grad(0, HORIZON, 0, 1500, ['#3d4a2a', '#2c2f3a', '#1d1f33']), dirStyle('a', 4)); g.fillRect(-400, HORIZON, 1900, 1300);
+  const cloth = ['#c2452d', '#e0a02a', '#2f7d4a', '#3b5bb5', '#d86a9a', '#f0e2c0', '#8a3c8a'];
+  for (let r = 0; r < 14; r++) {
+    const y = 470 + r * 72, sz = 16 + r * 4.2, n = 22 - (r >> 1);
+    for (let k = 0; k < n; k++) {
+      const x = -360 + (k + R()) * (1840 / n), b = Math.sin(t * 3 + k + r) * 2;
+      if (x > 110 && x < 570 && y > 560 && y < 1080) { R(); R(); continue; }   // stage
+      const up = cheer > 0 && R() < .35 ? cheer : 0; const col = cloth[Math.floor(R() * cloth.length)];
+      g.beginPath(); g.ellipse(x, y + sz * 1.9 + b, sz * 1.5, sz * 1.25, 0, Math.PI, 0); g.fillStyle = st(col, dirStyle('g', 90, .8)); g.fill();
+      ell(x, y + b, sz * .8, sz * .92, st(heat > 0 ? '#3a2418' : '#221a2c', dirStyle('g', 90, .7)));
+      if (heat > 0 && PASS === 'c') { g.beginPath(); g.arc(x, y + b, sz * .8, Math.PI * 1.1, Math.PI * 1.9); g.strokeStyle = `rgba(255,150,60,${.8 * heat})`; g.lineWidth = sz * .3; g.stroke(); }
+      if (up > 0) lineC([[x + sz, y + sz * 1.2], [x + sz * 1.6, y - sz * 1.8 * up + Math.sin(t * 8 + k) * 6]], sz * .45, col);
+    }
+  }
+  if (heat > 0 && PASS === 'c') { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = radial(540, 300, 50, 1300, [`rgba(255,130,40,${.4 * heat})`, 'rgba(255,100,30,0)']); g.fillRect(-400, 300, 1900, 1300); g.restore(); }
+}
+
+// ---------- Ravan (ten heads)
+const HEADS = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5].map(i => [540 + i * 116, -360 + Math.abs(i) * 6, i === 0 ? 1.3 : 1]);
+function ravanHead(x, y, s, char) {
+  const skin = lerp(0, 1, char) > .5 ? '#3a2a22' : '#e0925e';
+  // crown
+  g.beginPath(); g.moveTo(x - 55 * s, y - 60 * s); g.lineTo(x - 45 * s, y - 150 * s); g.lineTo(x - 20 * s, y - 110 * s); g.lineTo(x, y - 175 * s); g.lineTo(x + 20 * s, y - 110 * s); g.lineTo(x + 45 * s, y - 150 * s); g.lineTo(x + 55 * s, y - 60 * s); g.closePath();
+  g.fillStyle = st(char > .5 ? '#4a3420' : '#e8b93a', dirStyle('g', 90, .6)); g.fill();
+  if (PASS === 'c' && char < .5) { for (const dx of [-30, 0, 30]) { g.fillStyle = '#d93a2a'; g.beginPath(); g.arc(x + dx * s, y - 85 * s, 9 * s, 0, 7); g.fill(); } }
+  ell(x, y, 58 * s, 70 * s, st(skin, dirStyle('g', 90, .55)));
+  if (PASS === 'c' && char < .6) {
+    for (const sd of [-1, 1]) { ell(x + sd * 22 * s, y - 12 * s, 14 * s, 9 * s, '#fff'); ell(x + sd * 22 * s, y - 12 * s, 6 * s, 6 * s, '#111'); g.beginPath(); g.moveTo(x + sd * 8 * s, y - 28 * s); g.lineTo(x + sd * 38 * s, y - 36 * s); g.strokeStyle = '#111'; g.lineWidth = 6 * s; g.stroke(); }
+    g.beginPath(); g.moveTo(x - 40 * s, y + 18 * s); g.bezierCurveTo(x - 20 * s, y + 4 * s, x - 6 * s, y + 10 * s, x, y + 16 * s); g.bezierCurveTo(x + 6 * s, y + 10 * s, x + 20 * s, y + 4 * s, x + 40 * s, y + 18 * s); g.bezierCurveTo(x + 50 * s, y + 8 * s, x + 50 * s, y - 2 * s, x + 44 * s, y - 4 * s);
+    g.strokeStyle = '#111'; g.lineWidth = 9 * s; g.stroke();
+    ell(x, y + 36 * s, 16 * s, 7 * s, '#b31e1e');
+    g.fillStyle = '#d93a2a'; g.fillRect(x - 4 * s, y - 60 * s, 8 * s, 22 * s);
+  }
+}
+function ravan(t, burn) {
+  const char = seg(burn, .35, 1);
+  const dark = c => char > 0 ? `color-mix(in srgb, ${c} ${Math.round((1 - char * .85) * 100)}%, #1a0f0a)` : c;
+  // legs + dhoti
+  for (const lx of [470, 610]) { g.fillStyle = st(dark('#efe0b0'), dirStyle('g', 90)); g.fillRect(lx - 45, 140, 90, 280); if (PASS === 'c') { g.fillStyle = dark('#c8321e'); g.fillRect(lx - 45, 380, 90, 16); } }
+  // torso
+  g.beginPath(); g.moveTo(360, -250); g.lineTo(720, -250); g.lineTo(670, 160); g.lineTo(410, 160); g.closePath(); g.fillStyle = st(dark('#c8321e'), dirStyle('g', 90)); g.fill();
+  if (PASS === 'c') {
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 4; c++) { g.fillStyle = dark('#e8b93a'); g.beginPath(); g.arc(440 + c * 66 + (r % 2) * 33, -190 + r * 70, 16, 0, 7); g.fill(); }
+    g.beginPath(); g.moveTo(380, -250); g.lineTo(700, 160); g.lineTo(650, 160); g.lineTo(360, -200); g.closePath(); g.fillStyle = dark('#2f7d3a'); g.fill();
+    for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(540, -250, 70 + k * 26, .2 * Math.PI, .8 * Math.PI); g.strokeStyle = dark('#f0c850'); g.lineWidth = 10; g.stroke(); }
+  }
+  // arms: sword and shield
+  lineC([[365, -230], [260, -60], [220, 60]], 58, dark('#e0925e'));
+  lineC([[715, -230], [820, -60], [850, 40]], 58, dark('#e0925e'));
+  if (PASS === 'd') { g.lineCap = 'round'; for (const pts of [[[365, -230], [220, 60]], [[715, -230], [850, 40]]]) { g.beginPath(); g.moveTo(...pts[0]); g.lineTo(...pts[1]); g.strokeStyle = dirStyle('g', 70); g.lineWidth = 58; g.stroke(); } }
+  g.beginPath(); g.moveTo(205, 70); g.lineTo(190, -330); g.lineTo(215, -380); g.lineTo(240, -330); g.lineTo(230, 70); g.closePath(); g.fillStyle = st(dark('#cfd6dc'), dirStyle('a', 92, .7)); g.fill();
+  ell(860, 30, 105, 105, st(dark('#e8b93a'), conicDir(860, 30, 'tan', .7)));
+  ell(860, 30, 70, 70, st(dark('#b8321e'), conicDir(860, 30, 'tan', .6)));
+  // collar that carries the row of heads
+  g.beginPath(); g.moveTo(20, -330); g.quadraticCurveTo(540, -250, 1110, -330); g.lineTo(1110, -270); g.quadraticCurveTo(540, -180, 20, -270); g.closePath();
+  g.fillStyle = st(dark('#2f7d3a'), dirStyle('a', 4)); g.fill();
+  if (PASS === 'c') for (let k = 0; k < 22; k++) { const x = 40 + k * 50; g.fillStyle = dark(k % 2 ? '#e8b93a' : '#d93a2a'); g.beginPath(); g.arc(x, -262 - Math.sin(k / 21 * Math.PI) * 60, 12, 0, 7); g.fill(); }
+  // ten heads
+  HEADS.forEach(([x, y, s]) => ravanHead(x, y, s, char));
+}
+
+// flames: anchors all over the effigy catch fire as the burn front spreads from the arrow's hit
+const FIRE_ANCHORS = (() => {
+  const R = mulberry(8), a = [];
+  for (let k = 0; k < 60; k++) a.push([400 + R() * 280, -240 + R() * 390]);
+  for (let k = 0; k < 16; k++) a.push([470 + (k % 2) * 140 + (R() - .5) * 70, 160 + R() * 250]);
+  HEADS.forEach(([x, y]) => { for (let k = 0; k < 4; k++) a.push([x + (R() - .5) * 90, y - 40 + R() * 90]); });
+  for (let k = 0; k < 14; k++) a.push([230 + (R() - .5) * 60 + k * 45 * (R() < .5 ? 1 : 0), -200 + R() * 260]);
+  return a.map(([x, y]) => ({ x, y, d: Math.hypot(x - 540, y + 100), h: 60 + R() * 120, ph: R() * 7 }));
+})();
+function flames(t, fireT) {
+  for (const f of FIRE_ANCHORS) {
+    const age = fireT - f.d / 200; if (age <= 0) continue;
+    const k = sm(clamp(age / .8)), h = f.h * k * (1 + .25 * Math.sin(t * 9 + f.ph)), w = 18 + h * .16, sw = Math.sin(t * 6 + f.ph) * 14;
+    g.beginPath(); g.moveTo(f.x - w, f.y); g.bezierCurveTo(f.x - w, f.y - h * .5, f.x + sw - 6, f.y - h * .8, f.x + sw, f.y - h); g.bezierCurveTo(f.x + sw + 6, f.y - h * .8, f.x + w, f.y - h * .5, f.x + w, f.y); g.closePath();
+    g.fillStyle = st(grad(0, f.y, 0, f.y - h, ['rgba(255,242,160,.95)', 'rgba(255,192,42,.9)', 'rgba(255,106,26,.75)', 'rgba(200,40,20,0)']), dirStyle('g', 90, .8)); g.fill();
+  }
+  if (PASS === 'c') glowC(540, -60, 800, '255,140,40', .45 * clamp(fireT / 2));
+}
+
+// ---------- Ram on the Ramlila stage
+function ram(t) {
+  const pull = sm(seg(t, 12.6, 13.8)) * (t < 14.0 ? 1 : 0);
+  // stage
+  g.fillStyle = st(grad(0, 1000, 0, 1090, ['#8a3a1e', '#5a2412']), dirStyle('a', 0)); g.fillRect(120, 1000, 440, 90);
+  if (PASS === 'c') for (let k = 0; k < 9; k++) { g.fillStyle = k % 2 ? '#ffb02a' : '#ff7a1a'; g.beginPath(); g.arc(140 + k * 50, 1000, 18, 0, 7); g.fill(); }
+  const x = 330, y = 700, ang = Math.atan2(-100 - y, 540 - x);
+  // body
+  g.beginPath(); g.moveTo(x - 70, y + 10); g.lineTo(x + 70, y + 10); g.lineTo(x + 95, y + 300); g.lineTo(x - 95, y + 300); g.closePath(); g.fillStyle = st('#f2c230', dirStyle('g', 90, .7)); g.fill();
+  g.fillStyle = st('#3f6fd0', dirStyle('g', 90, .6)); g.fillRect(x - 60, y + 10, 120, 110);
+  lineC([[x - 60, y + 20], [x + 60, y + 120]], 20, '#ff7a1a');
+  // head + crown
+  ell(x, y - 55, 44, 52, st('#3f6fd0', dirStyle('g', 90, .5)));
+  g.beginPath(); g.moveTo(x - 40, y - 90); g.lineTo(x - 30, y - 170); g.lineTo(x, y - 200); g.lineTo(x + 30, y - 170); g.lineTo(x + 40, y - 90); g.closePath(); g.fillStyle = st('#f0c040', dirStyle('g', 90, .5)); g.fill();
+  if (PASS === 'c') { ell(x - 14, y - 60, 5, 4, '#111'); ell(x + 14, y - 60, 5, 4, '#111'); g.fillStyle = '#d93a2a'; g.fillRect(x - 3, y - 92, 6, 18); ell(x, y - 30, 10, 4, '#8a1e1e'); }
+  // bow arm (towards Ravan) and string arm
+  const bx = x + Math.cos(ang) * 190, by = y + 20 + Math.sin(ang) * 190;
+  lineC([[x + 50, y + 30], [bx, by]], 30, '#3f6fd0');
+  const nx = -Math.sin(ang), ny = Math.cos(ang);
+  const sx = bx - Math.cos(ang) * (20 + pull * 150), sy = by - Math.sin(ang) * (20 + pull * 150);
+  if (PASS === 'c') {
+    g.beginPath(); g.moveTo(bx + nx * 150, by + ny * 150); g.quadraticCurveTo(bx + Math.cos(ang) * (60 + pull * 30), by + Math.sin(ang) * (60 + pull * 30), bx - nx * 150, by - ny * 150); g.strokeStyle = '#8a4a1a'; g.lineWidth = 14; g.stroke();
+    g.beginPath(); g.moveTo(bx + nx * 150, by + ny * 150); g.lineTo(sx, sy); g.lineTo(bx - nx * 150, by - ny * 150); g.strokeStyle = '#f4ecd0'; g.lineWidth = 3; g.stroke();
+  }
+  lineC([[x - 50, y + 30], [sx, sy]], 28, '#3f6fd0');
+  if (t < 14.0 && pull > .05 && PASS === 'c') { lineC([[sx, sy], [sx + Math.cos(ang) * 240, sy + Math.sin(ang) * 240]], 7, '#e8d8a0'); glowC(sx + Math.cos(ang) * 240, sy + Math.sin(ang) * 240, 50, '255,170,60', .8 * pull); }
+  return { bx, by, ang };
+}
+function arrow(t) {
+  if (t < 14.0 || t > 15.15) return;
+  const k = sm(seg(t, 14.0, 15.1)), x0 = 385, y0 = 520, x1 = 540, y1 = -100;
+  const x = lerp(x0, x1, k), y = lerp(y0, y1, k) - Math.sin(k * Math.PI) * 120;
+  const dx = x1 - x0, dy = (y1 - y0) - Math.cos(k * Math.PI) * 120 * Math.PI, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+  const ang = Math.atan2(uy, ux) * 180 / Math.PI;
+  g.beginPath(); g.moveTo(x - ux * 380, y - uy * 380); g.lineTo(x, y);
+  g.strokeStyle = st(grad(x - ux * 380, y - uy * 380, x, y, ['rgba(255,80,20,0)', '#ff7a1a', '#ffe070', '#fffbe0']), dirStyle('a', ang, .8)); g.lineWidth = 26; g.lineCap = 'round'; g.stroke();
+  glowC(x, y, 180, '255,190,90', .9);
+}
+
+function fireworks(t) {
+  BURSTS.forEach(([t0, x, y], i) => {
+    const age = t - t0; if (age < 0 || age > 2.2) return;
+    const k = eOut(clamp(age / 1.1)), fade = 1 - sm(clamp((age - .9) / 1.3)), R = 60 + 260 * k, cols = BURST_COLS[i % BURST_COLS.length];
+    g.beginPath(); g.arc(x, y, R + 40, 0, 7); g.fillStyle = st('rgba(0,0,0,0)', conicDir(x, y, 'rad', .8)); g.fill();
+    if (PASS !== 'c') return;
+    g.save(); g.globalAlpha = fade;
+    for (let p = 0; p < 26; p++) { const a = p / 26 * Math.PI * 2 + i, r0 = R * .22, r1 = R * (.85 + .15 * Math.sin(p * 3.1)); g.beginPath(); g.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0 + age * 30); g.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1 + age * age * 40); g.strokeStyle = cols[p % 3]; g.lineWidth = 16; g.lineCap = 'round'; g.stroke(); }
+    ell(x, y + age * 30, R * .2, R * .2, '#8a3a1a');
+    g.restore();
+    glowC(x, y, R * 1.6, '255,200,120', .5 * fade);
+  });
+}
+function smoke(t, fireT) {
+  if (fireT <= 0 || PASS !== 'c') return;
+  for (let k = 0; k < 7; k++) { const a = clamp(fireT / 3) * .35, y = -400 - ((t * 40 + k * 140) % 900), x = 540 + Math.sin(t * .5 + k) * 120 + (k - 3) * 60; ell(x, y, 150, 90, `rgba(70,55,80,${a * (1 - (-400 - y) / 900)})`); }
+}
+
+function dussehraWorld(t) {
+  const fireT = Math.max(0, t - 15.05), heat = clamp(fireT / 2.5);
+  sky(t, heat);
+  fireworks(t);
+  smoke(t, fireT);
+  skyline();
+  ferrisWheel(t);
+  ravan(t, clamp(fireT / 6));
+  if (fireT > 0) flames(t, fireT);
+  bulbs(t);
+  crowd(t, heat, sm(seg(t, 15.2, 16.0)));
+  ram(t);
+  arrow(t);
+  cypress(t);
+}
+
+// ============================================================ THE STILL LIFE (home, after Ravan Dahan)
+function thekuaPaint(x, y, rx, ry, rot) {
+  g.save(); g.translate(x, y); g.rotate(rot);
+  g.beginPath(); for (let i = 0; i <= 60; i++) { const a = i / 60 * Math.PI * 2, s = 1 + .04 * Math.sin(a * 18); i ? g.lineTo(Math.cos(a) * rx * s, Math.sin(a) * ry * s) : g.moveTo(Math.cos(a) * rx * s, Math.sin(a) * ry * s); } g.closePath();
+  g.fillStyle = st(radial(-rx * .2, -ry * .3, 5, rx * 1.1, ['#ffd67a', '#e89a34', '#b8601a']), dirStyle('g', 0, .42)); g.fill();
+  if (PASS === 'c') {
+    for (let k = 0; k < 11; k++) { const a = lerp(-1.2, 1.2, k / 10); g.beginPath(); g.moveTo(0, ry * .8); g.quadraticCurveTo(Math.sin(a) * rx * .5, ry * .8 - Math.cos(a) * ry * .8, Math.sin(a) * rx * .95, ry * .8 - Math.cos(a) * ry * 1.6); g.strokeStyle = 'rgba(130,60,15,.8)'; g.lineWidth = 5; g.stroke(); }
+    g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, 7); g.strokeStyle = 'rgba(100,45,10,.8)'; g.lineWidth = 5; g.stroke();
+  }
+  g.restore();
+}
+function stillLife(t) {
+  // everything here is drawn in frame coordinates of the final camera
+  g.save(); g.translate(0, -350 - CY);
+  // wall
+  g.fillStyle = st(grad(0, 0, 0, 1200, ['#2e6a78', '#3b8088', '#2c6070']), dirStyle('a', 88)); g.fillRect(-200, -200, 1480, 1450);
+  // window onto the Dussehra night
+  g.save(); g.beginPath(); g.rect(140, 90, 800, 880); g.clip();
+  g.fillStyle = st(grad(0, 90, 0, 970, ['#0a1a50', '#18388a', '#2f6fb6']), dirStyle('f')); g.fillRect(140, 90, 800, 880);
+  if (PASS === 'c') for (let k = 0; k < 3; k++) { const a0 = t * .12 + k * 2; g.beginPath(); g.arc(540 + k * 60 - 60, 420 + k * 80, 160 + k * 60, a0, a0 + 3.4); g.strokeStyle = ['rgba(200,220,235,.5)', 'rgba(235,225,150,.45)', 'rgba(120,170,230,.55)'][k]; g.lineWidth = 36; g.lineCap = 'round'; g.stroke(); }
+  g.beginPath(); g.arc(800, 220, 150, 0, 7); g.fillStyle = st(radial(800, 220, 40, 150, ['#f2d15a', '#c9d08a', 'rgba(110,160,190,0)']), conicDir(800, 220, 'tan', .8)); g.fill();
+  ell(800, 220, 55, 55, st('#f6c83a', conicDir(800, 220, 'tan', .6)));
+  for (const [bt, bx, by] of [[22.6, 360, 360], [23.9, 620, 520], [25.2, 300, 640], [26.6, 700, 330], [28.0, 460, 480]]) {
+    const age = t - bt; if (age < 0 || age > 2) continue;
+    const R = 40 + 130 * eOut(clamp(age / 1)), fade = 1 - sm(clamp((age - .7) / 1.3));
+    g.beginPath(); g.arc(bx, by, R + 20, 0, 7); g.fillStyle = st('rgba(0,0,0,0)', conicDir(bx, by, 'rad', .6)); g.fill();
+    if (PASS === 'c') { g.save(); g.globalAlpha = fade; for (let p = 0; p < 20; p++) { const a = p / 20 * Math.PI * 2; g.beginPath(); g.moveTo(bx + Math.cos(a) * R * .25, by + Math.sin(a) * R * .25); g.lineTo(bx + Math.cos(a) * R, by + Math.sin(a) * R); g.strokeStyle = ['#ffd23a', '#ff8c1a', '#fff3b0'][p % 3]; g.lineWidth = 10; g.lineCap = 'round'; g.stroke(); } g.restore(); }
+  }
+  // distant skyline, the effigy still glowing
+  const R = mulberry(4); let x = 140; while (x < 940) { const w = 50 + R() * 70, h = 40 + R() * 110; g.fillStyle = st('#1c2560', dirStyle('g', 90)); g.fillRect(x, 970 - h, w, h); if (PASS === 'c') for (let yy = 980 - h; yy < 960; yy += 20) if (R() < .5) { g.fillStyle = '#f7d24a'; g.fillRect(x + 8 + R() * (w - 20), yy, 8, 10); } x += w + 4; }
+  glowC(540, 960, 260, '255,120,40', .5);
+  g.restore();
+  g.lineWidth = 36; g.strokeStyle = st('#1c3f8f', dirStyle('a', 90)); g.strokeRect(140, 90, 800, 880);
+  g.lineWidth = 16; g.beginPath(); g.moveTo(540, 90); g.lineTo(540, 970); g.stroke();
+  // table
+  g.fillStyle = st(grad(0, 1180, 0, 1920, ['#e59a34', '#c97322', '#a45a1c']), dirStyle('a', 8)); g.fillRect(-200, 1180, 1480, 800);
+  if (PASS === 'c') for (let k = 0; k < 9; k++) { g.beginPath(); g.moveTo(-100, 1230 + k * 80); g.lineTo(1180, 1200 + k * 86); g.strokeStyle = 'rgba(120,50,15,.5)'; g.lineWidth = 6; g.stroke(); }
+  g.fillStyle = st('#1c3f8f', dirStyle('a', 0)); g.fillRect(-200, 1172, 1480, 16);
+  // vase of marigolds (after the Sunflowers)
+  g.beginPath(); g.moveTo(120, 1180); g.quadraticCurveTo(70, 1330, 140, 1420); g.lineTo(280, 1420); g.quadraticCurveTo(350, 1330, 300, 1180); g.closePath(); g.fillStyle = st(grad(100, 0, 320, 0, ['#e8c05a', '#c98a2a', '#8a5a1a']), dirStyle('g', 90, .7)); g.fill();
+  if (PASS === 'c') { g.fillStyle = '#1c3f8f'; g.fillRect(100, 1300, 220, 14); }
+  [[160, 1080, 60], [260, 1060, 56], [110, 1170, 52], [310, 1150, 54], [210, 1150, 62], [200, 990, 50], [300, 980, 46], [90, 1040, 44]].forEach(([fx, fy, fr], i) => {
+    const bob = Math.sin(t * 1.2 + i) * 3;
+    ell(fx, fy + bob, fr, fr, st(i % 2 ? '#ff8c1a' : '#ffb02a', conicDir(fx, fy + bob, 'rad', .6)));
+    ell(fx, fy + bob, fr * .35, fr * .35, st('#8a3a10', conicDir(fx, fy + bob, 'tan', .5)));
+  });
+  // plate of thekua
+  ell(560, 1520, 380, 170, st('#f1ecd9', conicDir(560, 1520, 'tan', .8)));
+  if (PASS === 'c') { g.beginPath(); g.ellipse(560, 1520, 380, 170, 0, 0, 7); g.strokeStyle = '#2f5fb0'; g.lineWidth = 22; g.stroke(); for (let k = 0; k < 26; k++) { const a = k / 26 * Math.PI * 2; ell(560 + Math.cos(a) * 340, 1520 + Math.sin(a) * 146, 8, 5, '#2f5fb0'); } }
+  [[420, 1545, .3], [700, 1550, -.3], [560, 1455, 0], [560, 1590, 0]].forEach(([tx, ty, r]) => thekuaPaint(tx, ty, 150, 82, r));
+  // brass diya with a halo like the stars
+  const fl = Math.sin(t * 9) * 4;
+  g.beginPath(); g.arc(880, 1250, 150, 0, 7); g.fillStyle = st(radial(880, 1250, 20, 150, ['#fff3b0', '#f2c850', 'rgba(60,120,130,0)']), conicDir(880, 1250, 'tan', .6)); g.fill();
+  ell(880, 1330, 110, 36, st('#d98a2a', dirStyle('a', 0, .6))); ell(880, 1318, 90, 20, st('#8a4a1a', dirStyle('a', 0, .6)));
+  g.beginPath(); g.moveTo(866, 1300); g.quadraticCurveTo(862 + fl, 1250, 880, 1215); g.quadraticCurveTo(898, 1250, 894, 1300); g.closePath(); g.fillStyle = st('#ffe070', dirStyle('a', 90, .5)); g.fill();
+  // chai glass
+  g.beginPath(); g.moveTo(740, 1300); g.lineTo(800, 1300); g.lineTo(792, 1400); g.lineTo(748, 1400); g.closePath(); g.fillStyle = st('#b5651d', dirStyle('a', 90, .5)); g.fill();
+  g.restore();
+}
+
+// ============================================================ WEBGL PAINTER
+const glc = mk(W, H);
+const gl = glc.getContext('webgl2', { premultipliedAlpha: true, preserveDrawingBuffer: true, antialias: false });
+function shader(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function program(vs, fs) { const p = gl.createProgram(); gl.attachShader(p, shader(gl.VERTEX_SHADER, vs)); gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
+
+const STROKE_VS = `#version 300 es
+precision highp float;
+layout(location=0) in vec2 aCorner;
+layout(location=1) in vec4 aA;   // world x, y, length, width
+layout(location=2) in vec4 aB;   // random: angle, value, dissolve threshold, brush variant
+uniform vec2 uRes; uniform vec3 uCam; uniform float uTime; uniform float uMix; uniform float uLayer; uniform vec2 uMixC;
+uniform sampler2D uRefA, uRefB, uDirA, uDirB;
+uniform vec4 uVort[4];
+out vec2 vUV; out vec3 vCol; out float vAlpha; flat out float vVar;
+vec2 scr(vec2 w) { return (w - uCam.xy) * uCam.z + 0.5 * uRes; }
+vec2 rot(vec2 v, float a) { float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
+vec2 advect(vec2 p) {
+  for (int i = 0; i < 4; i++) { vec2 d = p - uVort[i].xy; float R = uVort[i].z; p = uVort[i].xy + rot(d, uVort[i].w * exp(-dot(d, d) / (R * R)) * uTime); }
+  p.x += 9.0 * uTime; p.x = mod(p.x + 400.0, 1900.0) - 400.0;
+  return p;
+}
+vec2 flow(vec2 p) {
+  vec2 v = vec2(9.0, 3.0 * sin(p.x * 0.004 + uTime * 0.3));
+  for (int i = 0; i < 4; i++) { vec2 d = p - uVort[i].xy; float R = uVort[i].z; v += vec2(-d.y, d.x) * uVort[i].w * exp(-dot(d, d) / (R * R)); }
+  return v;
+}
+float K;
+vec3 ref(vec2 uv) { return mix(texture(uRefA, uv).rgb, texture(uRefB, uv).rgb, K); }
+vec4 dir(vec2 uv) { return K < 0.5 ? texture(uDirA, uv) : texture(uDirB, uv); }
+float lum(vec2 uv) { return dot(ref(uv), vec3(0.3, 0.59, 0.11)); }
+void main() {
+  vec2 s0 = scr(aA.xy);
+  float thr = 0.55 * aB.z + 0.45 * clamp(length(s0 - uMixC) / 1500.0, 0.0, 1.0);
+  K = smoothstep(thr - 0.05, thr + 0.05, uMix * 1.1 - 0.05);
+  vec2 pa = advect(aA.xy);
+  vec2 sa = scr(pa);
+  vec4 d = dir(sa / uRes);
+  bool fl = d.r > 0.75;
+  vec2 s = sa;
+  if (!fl) { s = s0; d = dir(s0 / uRes); fl = d.r > 0.75; if (fl) { s = sa; d = dir(sa / uRes); } }
+  vec2 uv = s / uRes;
+  if (uv.x < -0.04 || uv.x > 1.04 || uv.y < -0.04 || uv.y > 1.04) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  vec3 col = ref(uv);
+  vec2 e = vec2(2.5) / vec2(540.0, 960.0);
+  float gx = lum(uv + vec2(e.x, 0.0)) - lum(uv - vec2(e.x, 0.0));
+  float gy = lum(uv + vec2(0.0, e.y)) - lum(uv - vec2(0.0, e.y));
+  float gm = length(vec2(gx, gy));
+  float ang;
+  if (fl) { vec2 v = flow(fl ? pa : aA.xy); ang = atan(v.y, v.x); }
+  else if (d.r > 0.25 && gm > 0.035) ang = atan(gy, gx) + 1.5708;
+  else ang = d.g * 3.14159;
+  ang += (aB.x - 0.5) * 0.45;
+  float sz = clamp(d.b * 2.0, 0.3, 2.0);
+  float alpha = 1.0;
+  if (uLayer > 1.5) alpha = clamp(smoothstep(0.03, 0.10, gm) + (sz < 0.85 ? 0.75 : 0.0), 0.0, 1.0);
+  if (uLayer < 0.5 && sz < 0.85) alpha = 0.6;
+  if (alpha < 0.02) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+  float len = aA.z * uCam.z * sz * (fl ? 1.4 : 1.0);
+  float wid = aA.w * uCam.z * mix(1.0, sz, 0.75);
+  vec2 dv = vec2(cos(ang), sin(ang)), nv = vec2(-dv.y, dv.x);
+  float bend = (aB.y - 0.5) * 0.9;
+  vec2 off = dv * aCorner.x * len * 0.5 + nv * (aCorner.y * wid * 0.5 + bend * wid * (1.0 - aCorner.x * aCorner.x));
+  vec2 p = s + off;
+  gl_Position = vec4(p.x / uRes.x * 2.0 - 1.0, 1.0 - p.y / uRes.y * 2.0, 0.0, 1.0);
+  float l = dot(col, vec3(0.3, 0.59, 0.11));
+  col = mix(vec3(l), col, 1.22);
+  col *= 0.88 + 0.24 * aB.y;
+  col += (aB.w - 0.5) * vec3(0.07, 0.02, -0.06);
+  vCol = clamp(col, 0.0, 1.0); vAlpha = alpha; vUV = aCorner * 0.5 + 0.5; vVar = floor(aB.w * 4.0);
+}`;
+const STROKE_FS = `#version 300 es
+precision highp float;
+in vec2 vUV; in vec3 vCol; in float vAlpha; flat in float vVar;
+uniform sampler2D uBrush;
+out vec4 o;
+void main() {
+  vec4 b = texture(uBrush, vec2(vUV.x, (vUV.y * 0.94 + 0.03 + vVar) / 4.0));
+  float a = b.r * vAlpha;
+  if (a < 0.01) discard;
+  vec3 c = vCol * (0.8 + 0.38 * b.g);
+  o = vec4(c * a, a);
+}`;
+const UNDER_VS = `#version 300 es
+layout(location=0) in vec2 aP; out vec2 vUV;
+void main() { vUV = vec2(aP.x * 0.5 + 0.5, 0.5 - aP.y * 0.5); gl_Position = vec4(aP, 0.0, 1.0); }`;
+const UNDER_FS = `#version 300 es
+precision highp float;
+in vec2 vUV; uniform sampler2D uRefA, uRefB; uniform float uMix; out vec4 o;
+void main() { vec3 c = mix(texture(uRefA, vUV).rgb, texture(uRefB, vUV).rgb, uMix); o = vec4(c * 0.82, 1.0); }`;
+
+let P, PU, U = {}, UU = {}, TEX = {}, VAO, UVAO, IB, LAYERS = [];
+function makeTex(filter) { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; }
+function upload(t, canvas) { gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas); }
+
+function brushCanvas() {
+  const w = 256, h = 256, c = mk(w, h), cx = c.getContext('2d'), id = cx.createImageData(w, h), R = mulberry(3);
+  for (let v = 0; v < 4; v++) {
+    const bristle = [], edgeN = [];
+    for (let k = 0; k < 64; k++) bristle.push(.45 + .55 * R());
+    for (let k = 0; k < 32; k++) edgeN.push(R());
+    const tipA = .08 + R() * .08, tipB = .72 + R() * .14;
+    for (let y = 0; y < 64; y++) for (let x = 0; x < w; x++) {
+      const u = x / (w - 1), wv = y / 63;
+      const en = edgeN[Math.floor(u * 31)] * .1;
+      const across = sm(clamp((wv - .04 - en) / .16)) * sm(clamp((.96 - en - wv) / .16));
+      const br = bristle[Math.floor(wv * 63)];
+      const start = sm(clamp(u / tipA));
+      const dry = u > tipB ? clamp(1 - (u - tipB) / (1 - tipB) * (1.6 - br)) : 1;
+      const a = across * start * dry * (.72 + .28 * br);
+      const i = ((v * 64 + y) * w + x) * 4;
+      id.data[i] = Math.round(clamp(a) * 255); id.data[i + 1] = Math.round(clamp(br * Math.sqrt(across)) * 255); id.data[i + 2] = 0; id.data[i + 3] = 255;
+    }
+  }
+  cx.putImageData(id, 0, 0); return c;
+}
+
+function initGL() {
+  P = program(STROKE_VS, STROKE_FS); PU = program(UNDER_VS, UNDER_FS);
+  for (const n of ['uRes', 'uCam', 'uTime', 'uMix', 'uLayer', 'uMixC', 'uRefA', 'uRefB', 'uDirA', 'uDirB', 'uVort', 'uBrush']) U[n] = gl.getUniformLocation(P, n);
+  for (const n of ['uRefA', 'uRefB', 'uMix']) UU[n] = gl.getUniformLocation(PU, n);
+  TEX.refA = makeTex(gl.LINEAR); TEX.refB = makeTex(gl.LINEAR); TEX.dirA = makeTex(gl.NEAREST); TEX.dirB = makeTex(gl.NEAREST);
+  TEX.brush = makeTex(gl.LINEAR); upload(TEX.brush, brushCanvas());
+  // stroke instances: three layers, jittered-grid positions over the world the camera can see
+  const X0 = -400, X1 = 1500, Y0 = -2650, Y1 = 1500;
+  const specs = [[.0028, 50, 17], [.0068, 30, 10.5], [.0135, 17, 5.5]];
+  const R = mulberry(11);
+  VAO = gl.createVertexArray(); gl.bindVertexArray(VAO);
+  const corners = []; for (let i = 0; i < 6; i++) { const x = -1 + 2 * i / 5; corners.push(x, -1, x, 1); }
+  const cb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, cb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(corners), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const all = []; let offset = 0;
+  for (const [dens, len, wid] of specs) {
+    const cell = Math.sqrt(1 / dens), nx = Math.ceil((X1 - X0) / cell), ny = Math.ceil((Y1 - Y0) / cell);
+    const idx = []; for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) idx.push([i, j]);
+    for (let k = idx.length - 1; k > 0; k--) { const r = Math.floor(R() * (k + 1)); [idx[k], idx[r]] = [idx[r], idx[k]]; }
+    for (const [i, j] of idx) all.push(X0 + (i + R()) * cell, Y0 + (j + R()) * cell, len * (.8 + .4 * R()), wid * (.8 + .4 * R()), R(), R(), R(), R());
+    LAYERS.push([offset, idx.length]); offset += idx.length;
+  }
+  IB = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, IB); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(all), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, 0); gl.vertexAttribDivisor(1, 1);
+  gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 32, 16); gl.vertexAttribDivisor(2, 1);
+  window.STROKES = offset;
+  UVAO = gl.createVertexArray(); gl.bindVertexArray(UVAO);
+  const qb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, qb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+}
+
+// ============================================================ FRAME
+const REF = [mk(RW, RH), mk(RW, RH)], DIR = [mk(DW, DH), mk(DW, DH)];
+function study(which, t, cam, sceneFn) {
+  for (const [cv, sc, pass] of [[REF[which], RW / W, 'c'], [DIR[which], DW / W, 'd']]) {
+    g = cv.getContext('2d'); PASS = pass;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.fillStyle = pass === 'c' ? '#10204a' : dirStyle('f'); g.fillRect(0, 0, cv.width, cv.height);
+    g.setTransform(sc * cam.z, 0, 0, sc * cam.z, sc * (CX - cam.x * cam.z), sc * (CY - cam.y * cam.z));
+    sceneFn(t);
+  }
+}
+
+function paint(t) {
+  const cam = camAt(t);
+  const mix = sm(seg(t, 21.9, 23.9));
+  if (mix < 1) study(0, t, cam, dussehraWorld);
+  if (mix > 0) study(1, t, cam, stillLife);
+  upload(TEX.refA, REF[0]); upload(TEX.dirA, DIR[0]);
+  upload(TEX.refB, mix > 0 ? REF[1] : REF[0]); upload(TEX.dirB, mix > 0 ? DIR[1] : DIR[0]);
+  gl.viewport(0, 0, W, H);
+  gl.disable(gl.BLEND);
+  gl.useProgram(PU); gl.bindVertexArray(UVAO);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, TEX.refA); gl.uniform1i(UU.uRefA, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, TEX.refB); gl.uniform1i(UU.uRefB, 1);
+  gl.uniform1f(UU.uMix, mix);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.useProgram(P); gl.bindVertexArray(VAO); gl.bindBuffer(gl.ARRAY_BUFFER, IB);
+  [['uRefA', TEX.refA], ['uRefB', TEX.refB], ['uDirA', TEX.dirA], ['uDirB', TEX.dirB], ['uBrush', TEX.brush]].forEach(([n, tx], i) => { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, tx); gl.uniform1i(U[n], i); });
+  gl.uniform2f(U.uRes, W, H); gl.uniform3f(U.uCam, cam.x, cam.y, cam.z); gl.uniform1f(U.uTime, t); gl.uniform1f(U.uMix, mix); gl.uniform2f(U.uMixC, 560, 1500);
+  gl.uniform4fv(U.uVort, new Float32Array(VORT.flat()));
+  LAYERS.forEach(([off, n], li) => {
+    gl.uniform1f(U.uLayer, li);
+    gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 32, off * 32); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 32, off * 32 + 16);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 12, n);
+  });
+}
+
+// ============================================================ TYPE (crisp, over the paint)
+function caption(hi, en, y, a, b, t, o = {}) {
+  const k = sm(seg(t, a, a + .9)), outk = 1 - sm(seg(t, b - .7, b)), al = k * outk; if (al <= 0) return;
+  octx.save(); octx.globalAlpha = al; octx.textAlign = 'center'; octx.textBaseline = 'middle';
+  octx.shadowColor = 'rgba(8,14,40,.85)'; octx.shadowBlur = 26; octx.shadowOffsetY = 3;
+  octx.font = `${o.size || 110}px Tiro`; octx.fillStyle = o.color || '#fff4dc';
+  octx.fillText(hi, CX, y + (1 - k) * 18);
+  if (en) { octx.globalAlpha = al * sm(seg(t, a + .4, a + 1.2)); octx.font = `italic 400 ${o.enSize || 48}px Fraunces`; octx.fillStyle = '#f6e3b8'; octx.fillText(en, CX, y + (o.gap || 100)); }
+  octx.restore();
+}
+function endCard(t) {
+  if (t < 23.4) return;
+  const s = y0 => sm(seg(t, y0, y0 + 1));
+  octx.save(); octx.fillStyle = `rgba(8,16,48,${.35 * s(23.4)})`; octx.fillRect(140, 90, 800, 880); octx.restore();
+  caption('इस दशहरे,', null, 250, 23.5, 31, t, { size: 104 });
+  caption('मिठास घर की', null, 385, 23.9, 31, t, { size: 124, color: '#ffd98a' });
+  octx.save(); octx.textAlign = 'center'; octx.textBaseline = 'middle'; octx.shadowColor = 'rgba(8,14,40,.85)'; octx.shadowBlur = 22;
+  octx.globalAlpha = s(24.6); octx.font = '600 82px Fraunces'; octx.fillStyle = '#ffd166'; octx.fillText(BRAND, CX, 535);
+  octx.font = 'italic 400 40px Fraunces'; octx.fillStyle = '#f6e3b8'; octx.fillText('homemade thekua · ' + AREA, CX, 605);
+  const c = s(25.3); octx.globalAlpha = c; octx.translate(CX, 715); octx.shadowColor = 'rgba(37,211,102,.45)'; octx.shadowBlur = 36;
+  octx.beginPath(); octx.roundRect(-330, -52, 660, 104, 52); octx.fillStyle = '#1fae55'; octx.fill(); octx.shadowColor = 'transparent';
+  octx.beginPath(); octx.arc(-262, 0, 28, 0, 7); octx.strokeStyle = '#fff'; octx.lineWidth = 5; octx.stroke(); octx.beginPath(); octx.moveTo(-282, 18); octx.lineTo(-292, 36); octx.lineTo(-272, 28); octx.fillStyle = '#fff'; octx.fill(); octx.beginPath(); octx.arc(-262, 0, 10, 0, 7); octx.fill();
+  octx.font = '600 42px Poppins'; octx.fillStyle = '#fff'; octx.fillText('ORDER ON WHATSAPP', 36, 3);
+  octx.setTransform(1, 0, 0, 1, 0, 0); octx.globalAlpha = s(25.8); octx.shadowColor = 'rgba(8,14,40,.85)'; octx.shadowBlur = 20;
+  octx.font = '600 64px Poppins'; octx.fillStyle = '#fff'; octx.letterSpacing = '3px'; octx.fillText(PHONE, CX, 830);
+  octx.letterSpacing = '0px'; octx.font = '42px Tiro'; octx.fillStyle = '#ffd98a'; octx.fillText('दशहरे से छठ तक · festive orders open', CX, 915);
+  octx.restore();
+}
+
+let WEAVE;
+function makeWeave() {
+  const c = mk(W, H), x = c.getContext('2d'), id = x.createImageData(W, H), R = mulberry(2);
+  for (let y = 0; y < H; y++) for (let i = 0; i < W; i++) {
+    const v = 128 + 26 * Math.sin(i * 1.9) * Math.sin(y * .35) + 20 * Math.sin(y * 1.9) * Math.sin(i * .35) + (R() - .5) * 30;
+    const k = (y * W + i) * 4; id.data[k] = id.data[k + 1] = id.data[k + 2] = v; id.data[k + 3] = 255;
+  }
+  x.putImageData(id, 0, 0); return c;
+}
+
+function render(t) {
+  paint(t);
+  octx.setTransform(1, 0, 0, 1, 0, 0); octx.globalAlpha = 1; octx.globalCompositeOperation = 'source-over';
+  octx.drawImage(glc, 0, 0);
+  octx.save(); octx.globalCompositeOperation = 'overlay'; octx.globalAlpha = .16; octx.drawImage(WEAVE, 0, 0); octx.restore();
+  octx.save(); const v = octx.createRadialGradient(CX, CY, H * .35, CX, CY, H * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(5,8,25,.45)'); octx.fillStyle = v; octx.fillRect(0, 0, W, H); octx.restore();
+  caption('विजयादशमी', 'Vijayadashami · Dussehra in Dwarka', 360, 1.4, 5.6, t, { size: 136 });
+  octx.save(); octx.fillStyle = octx.createLinearGradient(0, 1480, 0, 1920); octx.restore();
+  caption('बुराई पर अच्छाई की जीत', 'the victory of good over evil', 1640, 6.8, 11.4, t, { size: 94 });
+  caption('शुभ दशहरा', 'Happy Dussehra, Dwarka', 1640, 17.4, 21.7, t, { size: 140 });
+  endCard(t);
+  const fade = Math.max(1 - sm(seg(t, 0, 1.0)), sm(seg(t, 29.3, 30)));
+  if (fade > 0) { octx.fillStyle = `rgba(4,6,20,${fade})`; octx.fillRect(0, 0, W, H); }
+}
+
+async function init() {
+  await Promise.all([document.fonts.load('100px Tiro', 'दशहरा'), document.fonts.load('italic 400 40px Fraunces', 'x'), document.fonts.load('600 80px Fraunces', 'S'), document.fonts.load('600 40px Poppins', 'O')]);
+  initGL();
+  WEAVE = makeWeave();
+  window.READY = true;
+}
+window.frameJPEG = (t, q = .93) => { render(t); return out.toDataURL('image/jpeg', q); };
+init().catch(e => { console.error(e.message); });
+if (!/[?&]capture/.test(location.search)) {
+  const t0 = performance.now();
+  const loop = () => { if (window.READY) render(((performance.now() - t0) / 1000) % 30); requestAnimationFrame(loop); };
+  loop();
+}
+</script>
+</body>
+</html>
