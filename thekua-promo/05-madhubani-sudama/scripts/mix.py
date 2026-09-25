@@ -98,7 +98,8 @@ def main():
     os.makedirs(out, exist_ok=True)
     silent = os.path.join(ROOT, "out/film-silent.mp4")
     full = os.path.join(out, "sudama-ki-potli.mp4")
-    subprocess.run([FF, "-y", "-loglevel", "error", "-i", silent, "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy",
+    subprocess.run([FF, "-y", "-loglevel", "error", "-i", silent, "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+                    "-maxrate", "12M", "-bufsize", "24M", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "192k", "-t", "60", "-movflags", "+faststart", full], check=True)
     subprocess.run([FF, "-y", "-loglevel", "error", "-i", full, "-vf", "scale=720:1280:flags=lanczos", "-c:v", "libx264", "-preset", "slow",
                     "-b:v", "2600k", "-maxrate", "3200k", "-bufsize", "6000k", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
