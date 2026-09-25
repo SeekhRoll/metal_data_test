@@ -9,6 +9,7 @@ These are vertical (9:16) promos for homemade thekua, sized for Instagram Reels,
 | [`03-ghar-ki-mithas/`](03-ghar-ki-mithas) | "घर की मिठास" (the sweetness of home) | Vivid flat illustration, one continuous shot through family life, bansuri and santoor |
 | [`04-van-gogh-dussehra/`](04-van-gogh-dussehra) | Dussehra in the style of Van Gogh | Painted with ~150k GPU brush strokes: swirling Starry Night sky, Ravan Dahan, sunflower fireworks, thekua still life |
 | [`05-madhubani-sudama/`](05-madhubani-sudama) | "सुदामा की पोटली": Madhubani story series, Episode 1 (60 s) | Remotion + SVG Madhubani painting: bharni double lines, replacement-drawing animation on twos, Gita 9.26 moral, sticker-style end card |
+| [`06-shadow-gilahari/`](06-shadow-gilahari) | "गिलहरी का योगदान": Chhaya Katha shadow-puppet series, Episode 1 (60 s) | Tholu Bommalata leather puppets on a lamp-lit screen: translucent leather, glowing perforations, rivets, rods, depth blur. Stage and puppet sheets awaiting approval |
 
 Every concept folder has the same layout:
 
