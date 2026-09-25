@@ -1,20 +1,22 @@
 import React from 'react';
-import { L, GLOW } from './palette';
+import { L, GLOW, LIFT } from './palette';
 
 // ---------------------------------------------------------------- translucent leather (brief §3.3)
 // A dyed leather piece: colour multiplies over the glowing screen at partial opacity, the thicker edge
 // reads darker, and punched holes (masked out) let the lamp through and bloom.
-export const Leather: React.FC<{ id: string; d: string; fill: string; holes?: React.ReactNode; alpha?: number; edge?: number; paint?: React.ReactNode }> = ({ id, d, fill, holes, alpha = .84, edge = 3, paint }) => (
+export const Leather: React.FC<{ id: string; d: string; fill: string; holes?: React.ReactNode; alpha?: number; edge?: number; paint?: React.ReactNode; lift?: number; cut?: React.ReactNode }> = ({ id, d, fill, holes, alpha = .84, edge = 3, paint, cut, lift = LIFT[fill] ?? 0 }) => (
   <g data-kind="graphic">
     <mask id={`m-${id}`} maskUnits="userSpaceOnUse" x={-3000} y={-3000} width={6000} height={6000}>
       <path d={d} fill="#fff" />
       {holes && <g fill="#000" stroke="#000">{holes}</g>}
+      {cut && <g fill="#000">{cut}</g>}
     </mask>
     <g mask={`url(#m-${id})`} style={{ mixBlendMode: 'multiply' }}>
       <path d={d} fill={fill} opacity={alpha} />
       {paint}
       <path d={d} fill="none" stroke={L.black} strokeWidth={edge * 2.4} opacity={.55} />
     </g>
+    {lift > 0 && <g mask={`url(#m-${id})`}><path d={d} fill={fill} opacity={lift} /></g>}
     {holes && <g fill={GLOW} stroke={GLOW} opacity={.5} filter="url(#holeBloom)" style={{ mixBlendMode: 'screen' }}>{holes}</g>}
   </g>
 );
