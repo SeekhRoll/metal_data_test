@@ -8,7 +8,7 @@ import { Part } from '../stage/rig';
 
 type Opts = {
   name: string; skin: string; dhoti: string; hem: string; sash: string;
-  head: 'human' | 'monkey' | 'monkeyLaugh'; crown?: 'tall' | 'short'; weapon?: 'bow' | 'mace'; tail?: boolean; quiver?: boolean;
+  head: 'human' | 'monkey' | 'monkeyLaugh'; crown?: 'tall' | 'short' | 'cap'; weapon?: 'bow' | 'mace'; tail?: boolean; quiver?: boolean;
   mustache?: boolean; lower?: 'dhoti' | 'langot'; fur?: string;
 };
 
@@ -24,31 +24,65 @@ const MONKEY_MASK = 'M6 -14 C30 -22 62 -28 74 -48 C80 -64 72 -78 60 -80 C58 -98 
 
 const Pupil: React.FC<{ x: number; y: number }> = ({ x, y }) => <circle cx={x} cy={y} r={5.5} fill={L.black} opacity={.92} />;
 
-function crown(kind: 'tall' | 'short', k: string, ox = 4) {
-  const tiers = kind === 'tall' ? 5 : 3;
-  const parts: string[] = ['M-44 -146 L52 -146 L50 -178 L-42 -178 Z'];
-  let top = -178;
-  for (let i = 0; i < tiers; i++) {
-    const y0 = -178 - i * 40, y1 = y0 - 40, w0 = 46 - i * 7, w1 = 46 - (i + 1) * 7;
-    parts.push(`M${ox - w0} ${y0} L${ox + w0} ${y0} L${ox + w1} ${y1 + 6} L${ox - w1} ${y1 + 6} Z`);
-    top = y1;
+// Kireetam: one smooth shikhara-like silhouette (no stacked tiers), jewelled brow band, amalaka ring and
+// kalasha finial, with curled flame-leaf karnapatra flares sweeping back behind the head.
+// 'tall' = Ram, 'short' = Lakshman, 'cap' = Hanuman's rounded mukut.
+function crown(kind: 'tall' | 'short' | 'cap', k: string, ox = 4) {
+  const f = (n: number) => n.toFixed(1);
+  const yB = kind === 'cap' ? -120 : -134, y1 = yB - 38;                          // brow and top of the band
+  const h = kind === 'tall' ? 150 : kind === 'short' ? 96 : 62, yT = y1 - h;
+  const hw = (u: number) => kind === 'cap' ? 48 * Math.sqrt(Math.max(0, 1 - u * u)) + 2 : 44 - 32 * Math.pow(u, 1.25);
+  const band = `M${ox - 50} ${yB} C${ox - 24} ${yB - 7} ${ox + 30} ${yB - 7} ${ox + 56} ${yB} L${ox + 50} ${y1} C${ox + 22} ${y1 - 6} ${ox - 18} ${y1 - 6} ${ox - 46} ${y1} Z`;
+  const petals = Array.from({ length: 7 }, (_, i) => { const x = ox - 42 + i * 14.5; return `M${f(x - 7)} ${yB - 3} Q${f(x)} ${yB + 12} ${f(x + 7)} ${yB - 3} Z`; }).join(' ');
+  const tower = kind === 'cap'
+    ? `M${ox - 46} ${y1 + 2} C${ox - 50} ${y1 - h * .9} ${ox - 20} ${yT} ${ox} ${yT} C${ox + 20} ${yT} ${ox + 50} ${y1 - h * .9} ${ox + 46} ${y1 + 2} Z`
+    : `M${ox - 44} ${y1 + 2} C${ox - 48} ${f(y1 - h * .45)} ${ox - 14} ${f(yT + h * .25)} ${ox - 11} ${yT} L${ox + 11} ${yT} C${ox + 14} ${f(yT + h * .25)} ${ox + 48} ${f(y1 - h * .45)} ${ox + 44} ${y1 + 2} Z`;
+  const kT = yT - (kind === 'cap' ? 2 : 0);
+  const finial = `M${ox - 22} ${kT + 2} C${ox - 22} ${kT - 10} ${ox + 22} ${kT - 10} ${ox + 22} ${kT + 2} C${ox + 22} ${kT + 8} ${ox - 22} ${kT + 8} ${ox - 22} ${kT + 2} Z`
+    + ` M${ox - 13} ${kT - 6} C${ox - 16} ${kT - 26} ${ox - 6} ${kT - 34} ${ox} ${kT - 36} C${ox + 6} ${kT - 34} ${ox + 16} ${kT - 26} ${ox + 13} ${kT - 6} Z`
+    + ` M${ox - 5} ${kT - 34} C${ox - 3} ${kT - 44} ${ox - 1} ${kT - 54} ${ox} ${kT - 62} C${ox + 1} ${kT - 54} ${ox + 3} ${kT - 44} ${ox + 5} ${kT - 34} Z`;
+  // tower perforations: dot bands that follow the taper, a diamond lattice between them, jewel rosettes
+  const rows = kind === 'tall' ? [.18, .5, .8] : kind === 'short' ? [.22, .62] : [.35];
+  const lat: React.ReactNode[] = [];
+  rows.forEach((u, r) => {
+    const y = y1 - h * u, w = hw(u) * .78;
+    lat.push(<Dots key={'b' + r} pts={Array.from({ length: 7 }, (_, j) => [ox - w + j * (2 * w / 6), y] as [number, number])} r={2.8} />);
+    const u2 = rows[r + 1] ?? .96, ym = y1 - h * (u + u2) / 2, wm = hw((u + u2) / 2) * .6, n = Math.max(1, Math.round(wm / 12));
+    for (let j = -n; j <= n; j += 2) lat.push(<path key={'d' + r + j} d={`M${f(ox + j * wm / n)} ${f(ym - 9)} L${f(ox + j * wm / n + 5)} ${f(ym)} L${f(ox + j * wm / n)} ${f(ym + 9)} L${f(ox + j * wm / n - 5)} ${f(ym)} Z`} />);
+  });
+  // karnapatra: a scalloped fan plate behind the head (reads as ornament, not horns)
+  const cx = ox - 26, cy = y1 + 18, R = kind === 'cap' ? 74 : 96, r0 = 30, A0 = 150, A1 = kind === 'tall' ? 282 : 270, n = kind === 'cap' ? 4 : 6;
+  const P = (a: number, r: number): [number, number] => [cx + Math.cos(a * Math.PI / 180) * r, cy + Math.sin(a * Math.PI / 180) * r];
+  let fan = `M${P(A0, r0).map(f).join(' ')} L${P(A0, R).map(f).join(' ')}`;
+  for (let i = 0; i < n; i++) {
+    const a0 = A0 + (A1 - A0) * i / n, a1 = A0 + (A1 - A0) * (i + 1) / n, am = (a0 + a1) / 2;
+    fan += ` Q${P(am - 6, R * 1.3).map(f).join(' ')} ${P(am + 4, R * 1.12).map(f).join(' ')} Q${P(a1 - 2, R * 1.02).map(f).join(' ')} ${P(a1, R * .94).map(f).join(' ')}`;
   }
-  parts.push(`M${ox - 12} ${top + 6} L${ox} ${top - 44} L${ox + 12} ${top + 6} Z`);
-  // back fan of spikes (prabha) behind the crown
-  const fan = Array.from({ length: 5 }, (_, i) => { const a = Math.PI * (.9 + i * .12), r0 = 40, r1 = 118; const cx = -30, cy = -200; return `M${cx + Math.cos(a - .1) * r0} ${cy + Math.sin(a - .1) * r0} L${cx + Math.cos(a) * r1} ${cy + Math.sin(a) * r1} L${cx + Math.cos(a + .1) * r0} ${cy + Math.sin(a + .1) * r0} Z`; });
-  const holes = (
-    <>
-      <Dots pts={Array.from({ length: 8 }, (_, i) => [-34 + i * 11, -162])} r={3.4} />
-      {Array.from({ length: tiers }, (_, i) => <Dots key={i} pts={Array.from({ length: 5 - Math.floor(i / 2) }, (_, j) => [ox - 24 + i * 3 + j * (48 - i * 6) / (4 - Math.floor(i / 2)), -198 - i * 40])} r={3} />)}
-      <Rosette x={ox} y={-230} r={14} />
-      {kind === 'tall' && <Rosette x={ox} y={-310} r={10} />}
-      {fan.map((_, i) => { const a = Math.PI * (.9 + i * .12); return <Slit key={i} a={[-30 + Math.cos(a) * 55, -200 + Math.sin(a) * 55]} b={[-30 + Math.cos(a) * 100, -200 + Math.sin(a) * 100]} w={3} />; })}
-    </>
-  );
+  fan += ` L${P(A1, r0).map(f).join(' ')} A${r0} ${r0} 0 0 0 ${P(A0, r0).map(f).join(' ')} Z`;
+  const fanHoles = <>
+    {Array.from({ length: n }, (_, i) => { const am = A0 + (A1 - A0) * (i + .5) / n; return <Slit key={i} a={P(am, r0 + 14)} b={P(am + 3, R * .98)} w={3} />; })}
+    <DotLine pts={arcPts(cx, cy, R * .62, R * .62, (A0 + 4) * Math.PI / 180, (A1 - 4) * Math.PI / 180, 20)} step={12} r={2.6} />
+  </>;
   return (
     <g>
-      <Leather id={k + '-fan'} d={fan.join(' ')} fill={L.vermilion} alpha={.8} />
-      <Leather id={k + '-crown'} d={parts.join(' ')} fill={L.turmeric} holes={holes} />
+      <Leather id={k + '-kp'} d={fan} fill={L.vermilion} alpha={.8} holes={fanHoles} />
+      <Leather id={k + '-crown'} d={`${tower} ${finial}`} fill={L.turmeric}
+        holes={<>
+          {lat}
+          <DotLine pts={[[ox, y1 - 8], [ox, yT + 12]]} step={kind === 'cap' ? 11 : 13} r={2.2} />
+          {kind !== 'cap' && <Rosette x={ox} y={y1 - h * .34} r={11} />}
+          <circle cx={ox} cy={kT - 18} r={3.2} />
+        </>}
+        paint={<>
+          {rows.map((u, r) => { const y = y1 - h * u, w = hw(u); return <path key={r} d={`M${f(ox - w)} ${f(y - 5)} L${f(ox + w)} ${f(y - 5)} L${f(ox + w)} ${f(y + 5)} L${f(ox - w)} ${f(y + 5)} Z`} fill={L.vermilion} opacity={.55} />; })}
+          <path d={`M${ox - 22} ${kT + 2} C${ox - 22} ${kT - 10} ${ox + 22} ${kT - 10} ${ox + 22} ${kT + 2} Z`} fill={L.leaf} opacity={.6} />
+        </>} />
+      <Leather id={k + '-band'} d={`${band} ${petals}`} fill={L.turmeric}
+        holes={<>
+          <Dots pts={Array.from({ length: 9 }, (_, i) => [ox - 38 + i * 10.5, yB - 26] as [number, number])} r={2.6} />
+          <Rosette x={ox + 4} y={yB - 16} r={11} n={6} />
+        </>}
+        paint={<>{[-30, 30].map(dx => <ellipse key={dx} cx={ox + 4 + dx} cy={yB - 16} rx={7} ry={5} fill={L.leaf} opacity={.7} />)}</>} />
     </g>
   );
 }
@@ -199,6 +233,6 @@ export function humanoid(o: Opts): Part {
 
 export const RAM = humanoid({ name: 'ram', skin: L.ramTeal, dhoti: L.turmeric, hem: L.vermilion, sash: L.leaf, head: 'human', crown: 'tall', weapon: 'bow', quiver: true });
 export const LAKSHMAN = humanoid({ name: 'lakshman', skin: L.gold, dhoti: L.vermilion, hem: L.leaf, sash: L.indigo, head: 'human', crown: 'short', weapon: 'bow', quiver: true });
-export const HANUMAN = humanoid({ name: 'hanuman', skin: L.fur, fur: L.fur, dhoti: L.vermilion, hem: L.turmeric, sash: L.leaf, head: 'monkey', crown: 'short', weapon: 'mace', tail: true, lower: 'langot' });
+export const HANUMAN = humanoid({ name: 'hanuman', skin: L.fur, fur: L.fur, dhoti: L.vermilion, hem: L.turmeric, sash: L.leaf, head: 'monkey', crown: 'cap', weapon: 'mace', tail: true, lower: 'langot' });
 export const VANAR = humanoid({ name: 'vanar', skin: L.vanar, fur: L.vanar, dhoti: L.leaf, hem: L.turmeric, sash: L.vermilion, head: 'monkey', tail: true, lower: 'langot' });
 export const VANAR_LAUGH = humanoid({ name: 'vanarLaugh', skin: L.vanar, fur: L.vanar, dhoti: L.leaf, hem: L.turmeric, sash: L.vermilion, head: 'monkeyLaugh', tail: true, lower: 'langot' });
