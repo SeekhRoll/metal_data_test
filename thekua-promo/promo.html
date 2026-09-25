@@ -1,0 +1,973 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<title>Thekua Promo</title>
+<style>
+  @font-face { font-family: Rozha; src: url(fonts/RozhaOne-Regular.ttf); }
+  @font-face { font-family: Yatra; src: url(fonts/YatraOne-Regular.ttf); }
+  @font-face { font-family: Playfair; src: url(fonts/PlayfairDisplay-Italic.ttf); font-style: italic; font-weight: 400 900; }
+  @font-face { font-family: Poppins; src: url(fonts/Poppins-SemiBold.ttf); font-weight: 600; }
+  @font-face { font-family: Poppins; src: url(fonts/Poppins-Medium.ttf); font-weight: 500; }
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: 360px; height: 640px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// ============================================================ EDIT ME
+const BRAND   = 'Ghar Ka Thekua';            // shown on the end card
+const PHONE   = '+91 XXXXX XXXXX';           // WhatsApp number for orders
+const AREA    = 'DWARKA, NEW DELHI';
+// ============================================================
+
+const W = 1080, H = 1920, CX = W / 2, CY = H / 2;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+
+// ---------- math helpers
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOutCubic = k => 1 - Math.pow(1 - k, 3);
+const eInOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const eOutExpo = k => k >= 1 ? 1 : 1 - Math.pow(2, -10 * k);
+const eOutBack = k => { const c = 1.9; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+const eInCubic = k => k * k * k;
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const BEAT = 0.5;
+const pulse = (t, a = 4, b = 25) => (t < a || t > b) ? 0 : Math.exp(-((t - a) % BEAT) * 9);
+
+function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+// ============================================================ ASSETS
+const A = {};
+
+function thekuaShape(g, w, h, r, edgeAmp = 1) {
+  // scalloped oval (the edge the wooden sancha leaves)
+  g.beginPath();
+  const n = 220;
+  for (let i = 0; i <= n; i++) {
+    const a = i / n * Math.PI * 2;
+    const sc = 1 + 0.028 * edgeAmp * Math.sin(a * 22) + 0.018 * Math.sin(a * 3 + r) + 0.012 * Math.sin(a * 5 + r * 2);
+    const x = w / 2 + Math.cos(a) * w * 0.46 * sc;
+    const y = h / 2 + Math.sin(a) * h * 0.46 * sc;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  }
+  g.closePath();
+}
+
+// doneness: 0 raw dough, 1 golden fried. pattern: 0 smooth ball, 1 pressed
+function makeThekua(seed, done = 1, pattern = 1, S = 620) {
+  const w = S, h = Math.round(S * 0.8);
+  const c = mk(w, h), g = c.getContext('2d');
+  const R = mulberry(seed);
+  const rr = R() * 6;
+  const col = (raw, gold) => raw.map((v, i) => Math.round(lerp(v, gold[i], done)));
+  const mid = col([236, 214, 168], [196, 110, 34]);
+  const hi = col([248, 234, 200], [236, 168, 72]);
+  const edge = col([200, 170, 120], [96, 40, 8]);
+  const rgb = a => `rgb(${a[0]},${a[1]},${a[2]})`;
+
+  g.save();
+  thekuaShape(g, w, h, rr);
+  g.clip();
+  const bg = g.createRadialGradient(w * .42, h * .38, 10, w * .5, h * .5, w * .55);
+  bg.addColorStop(0, rgb(hi)); bg.addColorStop(.55, rgb(mid)); bg.addColorStop(1, rgb(edge));
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+
+  // fine texture speckles
+  for (let i = 0; i < 2600; i++) {
+    const x = R() * w, y = R() * h, s = R() * 2.4 + .4;
+    g.fillStyle = R() < .5 ? `rgba(70,30,5,${.08 + .18 * done * R()})` : `rgba(255,240,200,${.10 * R()})`;
+    g.fillRect(x, y, s, s);
+  }
+
+  if (pattern > 0) {
+    g.globalAlpha = pattern;
+    const ox = w / 2, oy = h * 0.93;
+    // fan / shell ridges radiating from the base
+    const ridges = 13;
+    for (let i = 0; i < ridges; i++) {
+      const a = lerp(-1.25, 1.25, i / (ridges - 1));
+      const len = h * 0.86;
+      const ex = ox + Math.sin(a) * len * 1.05, ey = oy - Math.cos(a) * len;
+      const cx1 = ox + Math.sin(a) * len * 0.45 + a * 16, cy1 = oy - Math.cos(a) * len * 0.5;
+      const path = () => { g.beginPath(); g.moveTo(ox + Math.sin(a) * 34, oy - 30); g.quadraticCurveTo(cx1, cy1, ex, ey); };
+      g.save(); g.filter = 'blur(4px)'; g.translate(3, 4); path(); g.strokeStyle = `rgba(${lerp(110, 55, done)},${lerp(80, 20, done)},${lerp(40, 2, done)},${lerp(.55, .75, done)})`; g.lineWidth = 15; g.lineCap = 'round'; g.stroke(); g.restore();
+      path(); g.strokeStyle = `rgba(${lerp(120, 70, done)},${lerp(90, 28, done)},${lerp(50, 4, done)},0.6)`; g.lineWidth = 6; g.lineCap = 'round'; g.stroke();
+      g.save(); g.filter = 'blur(2px)'; g.translate(-6, -5); path(); g.strokeStyle = `rgba(255,232,180,${lerp(.5, .45, done)})`; g.lineWidth = 6; g.stroke(); g.restore();
+    }
+    // centre vein + dotted border ring (mould detail)
+    g.beginPath(); g.ellipse(ox, oy - 26, 34, 24, 0, Math.PI, 0); g.strokeStyle = 'rgba(70,30,5,.45)'; g.lineWidth = 7; g.stroke();
+    for (let i = 0; i < 64; i++) {
+      const a = i / 64 * Math.PI * 2;
+      const x = w / 2 + Math.cos(a) * w * .39, y = h / 2 + Math.sin(a) * h * .39;
+      g.beginPath(); g.arc(x, y, 5.5, 0, 7); g.fillStyle = `rgba(70,30,5,${.35 + .1 * done})`; g.fill();
+      g.beginPath(); g.arc(x - 1.8, y - 1.8, 2.6, 0, 7); g.fillStyle = 'rgba(255,235,190,.35)'; g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+
+  // fennel seeds + coconut flecks
+  for (let i = 0; i < 26; i++) {
+    const a = R() * 7, d = Math.sqrt(R()) * .38;
+    const x = w / 2 + Math.cos(a) * w * d, y = h / 2 + Math.sin(a) * h * d;
+    g.save(); g.translate(x, y); g.rotate(R() * 7);
+    if (R() < .6) {
+      g.beginPath(); g.ellipse(0, 0, 9, 3.4, 0, 0, 7); g.fillStyle = `rgb(${lerp(140, 110, done)},${lerp(135, 95, done)},${lerp(70, 30, done)})`; g.fill();
+      g.beginPath(); g.ellipse(-1, -1, 6, 1.2, 0, 0, 7); g.fillStyle = 'rgba(255,240,180,.4)'; g.fill();
+    } else {
+      g.beginPath(); g.ellipse(0, 0, 6, 2.2, 0, 0, 7); g.fillStyle = `rgba(255,245,225,${.55 - .25 * done})`; g.fill();
+    }
+    g.restore();
+  }
+
+  // caramelised rim + inner edge shadow
+  g.globalCompositeOperation = 'multiply';
+  const rim = g.createRadialGradient(w / 2, h / 2, w * .25, w / 2, h / 2, w * .5);
+  rim.addColorStop(0, 'rgba(255,255,255,0)'); rim.addColorStop(1, `rgba(${lerp(170, 90, done)},${lerp(140, 40, done)},${lerp(100, 10, done)},.9)`);
+  g.fillStyle = rim; g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-over';
+  g.filter = 'blur(10px)';
+  thekuaShape(g, w, h, rr); g.lineWidth = 30; g.strokeStyle = `rgba(60,25,5,${.25 + .3 * done})`; g.stroke();
+  g.filter = 'none';
+  // ghee sheen
+  g.globalCompositeOperation = 'screen';
+  const sh = g.createRadialGradient(w * .36, h * .3, 0, w * .36, h * .3, w * .32);
+  sh.addColorStop(0, `rgba(255,236,190,${.28 + .22 * done})`); sh.addColorStop(1, 'rgba(255,236,190,0)');
+  g.fillStyle = sh; g.fillRect(0, 0, w, h);
+  g.restore();
+  g.globalCompositeOperation = 'source-over';
+  return c;
+}
+
+function makeDoughBall(S = 420) {
+  const c = mk(S, S), g = c.getContext('2d');
+  const gr = g.createRadialGradient(S * .38, S * .34, 10, S / 2, S / 2, S * .5);
+  gr.addColorStop(0, '#fbf1d9'); gr.addColorStop(.6, '#e8d2a2'); gr.addColorStop(1, '#b89763');
+  g.beginPath(); g.arc(S / 2, S / 2, S * .47, 0, 7); g.fillStyle = gr; g.fill();
+  g.save(); g.clip();
+  const R = mulberry(99);
+  for (let i = 0; i < 900; i++) { g.fillStyle = R() < .5 ? 'rgba(120,80,30,.12)' : 'rgba(255,255,240,.15)'; g.fillRect(R() * S, R() * S, 2, 2); }
+  for (let i = 0; i < 14; i++) { g.save(); g.translate(R() * S, R() * S); g.rotate(R() * 7); g.beginPath(); g.ellipse(0, 0, 8, 3, 0, 0, 7); g.fillStyle = 'rgba(130,120,60,.8)'; g.fill(); g.restore(); }
+  g.restore();
+  return c;
+}
+
+function makeWood() {
+  const c = mk(W, H), g = c.getContext('2d');
+  g.fillStyle = '#2a170c'; g.fillRect(0, 0, W, H);
+  const R = mulberry(5);
+  const planks = 4, pw = W / planks;
+  for (let p = 0; p < planks; p++) {
+    const tone = 0.85 + R() * 0.3;
+    g.fillStyle = `rgb(${Math.round(58 * tone)},${Math.round(34 * tone)},${Math.round(18 * tone)})`;
+    g.fillRect(p * pw, 0, pw, H);
+    for (let i = 0; i < 90; i++) {
+      const x0 = p * pw + R() * pw, amp = 4 + R() * 14, fr = .002 + R() * .004, ph = R() * 7;
+      g.beginPath();
+      for (let y = 0; y <= H; y += 16) { const x = x0 + Math.sin(y * fr + ph) * amp; y ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.strokeStyle = R() < .5 ? `rgba(20,10,4,${.15 + R() * .3})` : `rgba(120,78,44,${.06 + R() * .14})`;
+      g.lineWidth = .8 + R() * 2.6; g.stroke();
+    }
+    g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(p * pw - 2, 0, 4, H);
+  }
+  return c;
+}
+
+function makeBrassPlate(S = 1000) {
+  const c = mk(S, S), g = c.getContext('2d'), r = S / 2;
+  const con = g.createConicGradient(0.6, r, r);
+  const stops = ['#8a5a1c', '#f0cf7a', '#a8741f', '#e2b85e', '#6f4612', '#f7dc8f', '#9a6a1d', '#8a5a1c'];
+  stops.forEach((s, i) => con.addColorStop(i / (stops.length - 1), s));
+  g.beginPath(); g.arc(r, r, r * .98, 0, 7); g.fillStyle = con; g.fill();
+  // inner well
+  const inner = g.createRadialGradient(r * .8, r * .75, 20, r, r, r * .8);
+  inner.addColorStop(0, '#f3d58b'); inner.addColorStop(.6, '#c39336'); inner.addColorStop(1, '#7c5215');
+  g.beginPath(); g.arc(r, r, r * .8, 0, 7); g.fillStyle = inner; g.fill();
+  for (const [rad, a] of [[.8, .5], [.83, .25], [.9, .2], [.96, .35]]) { g.beginPath(); g.arc(r, r, r * rad, 0, 7); g.strokeStyle = `rgba(60,35,5,${a})`; g.lineWidth = 3; g.stroke(); g.beginPath(); g.arc(r - 1.5, r - 1.5, r * rad, 0, 7); g.strokeStyle = `rgba(255,240,190,${a * .6})`; g.lineWidth = 1.5; g.stroke(); }
+  // engraved dots on rim
+  for (let i = 0; i < 90; i++) { const a = i / 90 * 7 * .8976; const x = r + Math.cos(a) * r * .865, y = r + Math.sin(a) * r * .865; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fillStyle = 'rgba(80,45,8,.45)'; g.fill(); }
+  // brushed micro scratches
+  const R = mulberry(3);
+  g.save(); g.beginPath(); g.arc(r, r, r * .98, 0, 7); g.clip();
+  for (let i = 0; i < 700; i++) { const a = R() * 7, d = R() * r; g.beginPath(); g.arc(r, r, d, a, a + .05 + R() * .2); g.strokeStyle = `rgba(255,245,210,${R() * .08})`; g.lineWidth = 1; g.stroke(); }
+  g.restore();
+  return c;
+}
+
+function makeLeaf(w = 1500, h = 760) {
+  const c = mk(w, h), g = c.getContext('2d');
+  g.beginPath(); g.moveTo(0, h * .5);
+  g.bezierCurveTo(w * .2, -h * .05, w * .8, -h * .05, w, h * .45);
+  g.bezierCurveTo(w * .8, h * 1.05, w * .2, h * 1.05, 0, h * .5); g.closePath();
+  const gr = g.createLinearGradient(0, 0, 0, h);
+  gr.addColorStop(0, '#2f6b1f'); gr.addColorStop(.5, '#4f9a32'); gr.addColorStop(1, '#255a17');
+  g.fillStyle = gr; g.fill();
+  g.save(); g.clip();
+  for (let x = -h; x < w + h; x += 9) {
+    g.beginPath(); g.moveTo(x, h * .5); g.lineTo(x - h * .45, 0); g.moveTo(x, h * .5); g.lineTo(x - h * .45, h);
+    g.strokeStyle = `rgba(${x % 27 ? '20,50,10' : '160,210,110'},.22)`; g.lineWidth = 1.5; g.stroke();
+  }
+  const sh = g.createRadialGradient(w * .35, h * .3, 10, w * .5, h * .5, w * .6);
+  sh.addColorStop(0, 'rgba(220,255,180,.25)'); sh.addColorStop(1, 'rgba(0,20,0,.35)');
+  g.fillStyle = sh; g.fillRect(0, 0, w, h);
+  g.restore();
+  g.fillStyle = '#a8cf78'; g.fillRect(0, h * .5 - 7, w, 14);
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, h * .5 + 7, w, 5);
+  return c;
+}
+
+function makeMarigold(seed, S = 160) {
+  const c = mk(S, S), g = c.getContext('2d'), R = mulberry(seed);
+  const base = R() < .5 ? [250, 95, 0] : [255, 150, 0];
+  for (let i = 0; i < 240; i++) {
+    const d = Math.pow(R(), .7) * S * .45, a = R() * 7;
+    const x = S / 2 + Math.cos(a) * d, y = S / 2 + Math.sin(a) * d;
+    const k = 0.78 + 0.22 * (1 - d / (S * .45)) * R();
+    g.save(); g.translate(x, y); g.rotate(a);
+    g.beginPath(); g.ellipse(0, 0, 10, 6, 0, 0, 7);
+    g.fillStyle = `rgb(${Math.round(base[0] * k)},${Math.round(base[1] * k)},${Math.round(base[2] * k)})`; g.fill();
+    g.restore();
+  }
+  const sh = g.createRadialGradient(S * .4, S * .35, 2, S / 2, S / 2, S * .5);
+  sh.addColorStop(0, 'rgba(255,200,80,.25)'); sh.addColorStop(.75, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(120,20,0,.4)');
+  g.globalCompositeOperation = 'source-atop'; g.fillStyle = sh; g.fillRect(0, 0, S, S);
+  return c;
+}
+
+function makeJaggery(seed, S = 360) {
+  const c = mk(S, S), g = c.getContext('2d'), R = mulberry(seed);
+  const n = 7 + Math.floor(R() * 3), pts = [];
+  for (let i = 0; i < n; i++) { const a = i / n * 7 * .8976 + R() * .4, d = S * (.3 + R() * .14); pts.push([S / 2 + Math.cos(a) * d, S / 2 + Math.sin(a) * d]); }
+  g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
+  const gr = g.createLinearGradient(0, 0, S, S);
+  gr.addColorStop(0, '#d98a34'); gr.addColorStop(.5, '#9a4d12'); gr.addColorStop(1, '#5a2606');
+  g.fillStyle = gr; g.fill(); g.save(); g.clip();
+  // facets
+  for (let i = 0; i < n; i++) {
+    const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % n];
+    g.beginPath(); g.moveTo(S / 2 + (R() - .5) * 40, S / 2 + (R() - .5) * 40); g.lineTo(x1, y1); g.lineTo(x2, y2); g.closePath();
+    g.fillStyle = `rgba(${R() < .5 ? '255,200,120' : '40,15,0'},${.08 + R() * .18})`; g.fill();
+  }
+  for (let i = 0; i < 500; i++) { g.fillStyle = `rgba(255,${190 + R() * 60},120,${R() * .35})`; g.fillRect(R() * S, R() * S, 1.5, 1.5); }
+  g.restore();
+  return c;
+}
+
+function makeGrain() {
+  const out = [];
+  for (let k = 0; k < 6; k++) {
+    const c = mk(540, 960), g = c.getContext('2d'), id = g.createImageData(540, 960), R = mulberry(1000 + k);
+    for (let i = 0; i < id.data.length; i += 4) { const v = R() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+    g.putImageData(id, 0, 0); out.push(c);
+  }
+  return out;
+}
+
+// ============================================================ DRAW PRIMITIVES
+function drawImgC(img, x, y, s = 1, rot = 0, alpha = 1, shadow = 0) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(s, s);
+  if (shadow) { ctx.shadowColor = `rgba(0,0,0,${.55 * shadow})`; ctx.shadowBlur = 40 * shadow; ctx.shadowOffsetX = 18 * shadow * s; ctx.shadowOffsetY = 26 * shadow * s; }
+  ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  ctx.restore();
+}
+
+function glow(x, y, r, color, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color.replace('A', a)); g.addColorStop(1, color.replace('A', 0));
+  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+const BOKEH = (() => { const R = mulberry(11), a = []; for (let i = 0; i < 46; i++) a.push({ x: R() * W, y: R() * H, r: 20 + R() * 80, sp: 10 + R() * 40, ph: R() * 7, hue: R() }); return a; })();
+function bokeh(t, amt = 1) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (const b of BOKEH) {
+    const y = ((b.y - t * b.sp) % H + H) % H, x = b.x + Math.sin(t * .6 + b.ph) * 20;
+    const tw = .5 + .5 * Math.sin(t * 2 + b.ph);
+    const c = b.hue < .6 ? 'rgba(255,170,60,A)' : b.hue < .85 ? 'rgba(255,220,150,A)' : 'rgba(255,120,40,A)';
+    const g = ctx.createRadialGradient(x, y, b.r * .6, x, y, b.r);
+    g.addColorStop(0, c.replace('A', .10 * amt * (.5 + tw * .5))); g.addColorStop(.85, c.replace('A', .07 * amt)); g.addColorStop(1, c.replace('A', 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, b.r, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function diya(x, y, s, t, lit = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  // glow
+  if (lit > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    const fl = 1 + .08 * Math.sin(t * 23) + .05 * Math.sin(t * 37 + 1);
+    glow(0, -60, 420 * fl * lit, 'rgba(255,140,40,A)', .35 * lit);
+    glow(0, -60, 140 * fl * lit, 'rgba(255,210,120,A)', .45 * lit);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  // clay bowl
+  const bg = ctx.createLinearGradient(0, -30, 0, 50);
+  bg.addColorStop(0, '#b4552a'); bg.addColorStop(1, '#4a1a08');
+  ctx.beginPath(); ctx.moveTo(-120, -10); ctx.quadraticCurveTo(-100, 55, 0, 58); ctx.quadraticCurveTo(100, 55, 120, -10);
+  ctx.quadraticCurveTo(150, -30, 150, -40); ctx.lineTo(128, -22); ctx.quadraticCurveTo(0, -5, -120, -10); ctx.fillStyle = bg; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -12, 120, 20, 0, 0, 7); ctx.fillStyle = '#3a1406'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -10, 104, 14, 0, 0, 7); ctx.fillStyle = `rgba(230,160,40,${.5 + .4 * lit})`; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -12, 120, 20, 0, 0, 7); ctx.strokeStyle = '#d0703a'; ctx.lineWidth = 4; ctx.stroke();
+  // flame
+  if (lit > 0) {
+    const sw = Math.sin(t * 9) * 6 + Math.sin(t * 17) * 3, hgt = (95 + Math.sin(t * 13) * 8) * lit;
+    ctx.translate(120, -40);
+    const fg = ctx.createRadialGradient(0, -hgt * .35, 2, 0, -hgt * .35, hgt * .7);
+    fg.addColorStop(0, 'rgba(255,255,235,1)'); fg.addColorStop(.35, 'rgba(255,215,90,1)'); fg.addColorStop(.75, 'rgba(255,110,20,.85)'); fg.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.beginPath(); ctx.moveTo(-20, 0); ctx.quadraticCurveTo(-26, -hgt * .5, sw, -hgt); ctx.quadraticCurveTo(26, -hgt * .5, 20, 0); ctx.quadraticCurveTo(0, 12, -20, 0);
+    ctx.fillStyle = fg; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, -8, 5, 12, 0, 0, 7); ctx.fillStyle = 'rgba(80,120,255,.55)'; ctx.fill();
+  }
+  ctx.restore();
+}
+
+function steam(x, y, t, amt = 1, spread = 220) {
+  ctx.save(); ctx.filter = 'blur(14px)'; ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 5; i++) {
+    const ph = i * 1.7, k = ((t * .35 + i * .2) % 1);
+    ctx.beginPath();
+    const x0 = x + (i - 2) * spread / 4;
+    for (let j = 0; j <= 20; j++) {
+      const yy = y - j * 26 - k * 120, xx = x0 + Math.sin(j * .35 + t * 1.8 + ph) * (12 + j * 3.5);
+      j ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+    }
+    ctx.strokeStyle = `rgba(255,245,230,${.14 * amt * Math.sin(k * Math.PI)})`; ctx.lineWidth = 34; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// particles: deterministic burst, rendered at time since start
+function burst(seed, x, y, age, n, opt = {}) {
+  if (age < 0 || age > (opt.life || 1.2)) return;
+  const R = mulberry(seed), life = opt.life || 1.2;
+  ctx.save(); ctx.globalCompositeOperation = opt.comp || 'source-over';
+  for (let i = 0; i < n; i++) {
+    const a = (opt.dir ?? -Math.PI / 2) + (R() - .5) * (opt.cone ?? 7), sp = (opt.speed || 700) * (.3 + R() * .7);
+    const px = x + Math.cos(a) * sp * age * (1 - age / (2 * life)), py = y + Math.sin(a) * sp * age * (1 - age / (2 * life)) + (opt.grav || 0) * age * age;
+    const sz = (opt.size || 6) * (.4 + R()), fade = 1 - age / life;
+    ctx.globalAlpha = clamp(fade) * (opt.alpha || 1);
+    ctx.fillStyle = opt.colors ? opt.colors[Math.floor(R() * opt.colors.length)] : '#fff';
+    ctx.beginPath(); ctx.arc(px, py, sz, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---------- typography
+function setFont(size, fam, style = '') { ctx.font = `${style} ${size}px ${fam}`; }
+
+const TXT = mk(1400, 700), TG = TXT.getContext('2d');
+// golden foil text with moving shimmer; drawn via offscreen so the shimmer only hits glyphs
+function goldText(str, x, y, size, fam = 'Rozha', o = {}) {
+  const a = o.alpha ?? 1; if (a <= 0) return;
+  TG.setTransform(1, 0, 0, 1, 0, 0); TG.clearRect(0, 0, TXT.width, TXT.height);
+  TG.font = `${o.style || ''} ${size}px ${fam}`; TG.textAlign = 'center'; TG.textBaseline = 'middle';
+  if (o.spacing) TG.letterSpacing = o.spacing + 'px'; else TG.letterSpacing = '0px';
+  const tx = TXT.width / 2, ty = TXT.height / 2;
+  const gr = TG.createLinearGradient(0, ty - size * .55, 0, ty + size * .55);
+  (o.colors || ['#fff6d6', '#ffd66b', '#e59a22', '#fff0b8', '#b86f12']).forEach((c, i, arr) => gr.addColorStop(i / (arr.length - 1), c));
+  TG.fillStyle = gr; TG.fillText(str, tx, ty);
+  if (o.shimmer !== undefined) {
+    TG.globalCompositeOperation = 'source-atop';
+    const sx = lerp(-400, TXT.width + 400, o.shimmer);
+    const sg = TG.createLinearGradient(sx - 160, 0, sx + 160, 0);
+    sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(255,255,255,.9)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+    TG.fillStyle = sg; TG.fillRect(0, 0, TXT.width, TXT.height);
+    TG.globalCompositeOperation = 'source-over';
+  }
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(o.scale || 1, o.scale || 1);
+  if (o.blur) ctx.filter = `blur(${o.blur}px)`;
+  ctx.shadowColor = o.shadow || 'rgba(0,0,0,.65)'; ctx.shadowBlur = o.shadowBlur ?? 30; ctx.shadowOffsetY = 8;
+  ctx.drawImage(TXT, -tx, -ty);
+  if (o.glow) { ctx.shadowColor = 'transparent'; ctx.globalCompositeOperation = 'lighter'; ctx.filter = `blur(${24}px)`; ctx.globalAlpha *= o.glow; ctx.drawImage(TXT, -tx, -ty); }
+  ctx.restore();
+}
+
+function plainText(str, x, y, size, fam, color, o = {}) {
+  const a = o.alpha ?? 1; if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(o.scale || 1, o.scale || 1);
+  ctx.font = `${o.style || ''} ${size}px ${fam}`; ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle';
+  ctx.letterSpacing = (o.spacing || 0) + 'px';
+  if (o.blur) ctx.filter = `blur(${o.blur}px)`;
+  ctx.shadowColor = o.shadow || 'rgba(0,0,0,.7)'; ctx.shadowBlur = o.shadowBlur ?? 18; ctx.shadowOffsetY = 4;
+  ctx.fillStyle = color; ctx.fillText(str, 0, 0);
+  ctx.restore();
+}
+
+// rise-in / fade-out envelope for a text element
+function tin(t, a, b, dur = .45, out = .25) {
+  const i = eOutCubic(seg(t, a, a + dur)), o = 1 - seg(t, b - out, b);
+  return { a: i * o, y: (1 - i) * 60, blur: (1 - i) * 14 };
+}
+
+// letter-by-letter reveal for latin strings
+function letters(str, x, y, size, fam, color, t, t0, o = {}) {
+  ctx.save(); ctx.font = `${o.style || ''} ${size}px ${fam}`; ctx.letterSpacing = (o.spacing || 0) + 'px';
+  const total = ctx.measureText(str).width; ctx.restore();
+  let cx = x - total / 2;
+  for (let i = 0; i < str.length; i++) {
+    ctx.save(); ctx.font = `${o.style || ''} ${size}px ${fam}`; ctx.letterSpacing = (o.spacing || 0) + 'px';
+    const cw = ctx.measureText(str[i]).width; ctx.restore();
+    const k = eOutBack(seg(t, t0 + i * (o.stagger ?? .03), t0 + i * (o.stagger ?? .03) + .35));
+    const fade = o.end ? 1 - seg(t, o.end - .2, o.end) : 1;
+    plainText(str[i], cx + cw / 2, y + (1 - k) * 50, size, fam, color, { alpha: clamp(k) * fade, style: o.style, spacing: 0, shadowBlur: o.shadowBlur });
+    cx += cw;
+  }
+}
+
+// ============================================================ SCENES
+// every scene draws a full frame for global time t
+function darkBg(k = 1) {
+  const g = ctx.createRadialGradient(CX, CY * .9, 50, CX, CY, H * .75);
+  g.addColorStop(0, `rgba(${Math.round(60 * k)},${Math.round(28 * k)},${Math.round(10 * k)},1)`); g.addColorStop(1, '#070302');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+function woodBg(dark = .55) {
+  ctx.drawImage(A.wood, 0, 0);
+  ctx.fillStyle = `rgba(8,3,1,${dark})`; ctx.fillRect(0, 0, W, H);
+}
+
+// ---- S1 0-4: cold open, diya ignites, title slam
+function scene1(t) {
+  const light = eOutCubic(seg(t, .3, 1.3));
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.globalAlpha = light; woodBg(.72); ctx.restore();
+  bokeh(t, light * (t > 2 ? 1.4 : .8));
+  // match flash
+  if (t > .25 && t < .6) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX + 90, 1480, 500, 'rgba(255,200,120,A)', (1 - seg(t, .25, .6)) * .7); ctx.restore(); }
+  burst(21, CX + 150, 1450, t - .28, 40, { speed: 900, size: 3, colors: ['#ffd27a', '#ff9a3a', '#fff'], life: .7, comp: 'lighter', cone: 3 });
+  diya(CX - 20, 1560, 1.35, t, light);
+
+  if (t < 2) {
+    const e1 = tin(t, .5, 2.0, .4, .15);
+    plainText('Dwarka,', CX, 640 + e1.y, 96, 'Playfair', '#ffe3b0', { style: 'italic 600', alpha: e1.a, blur: e1.blur });
+    const e2 = tin(t, 1.0, 2.0, .45, .15);
+    goldText('कुछ मीठा हो जाए?', CX, 800 + e2.y, 104, 'Yatra', { alpha: e2.a, blur: e2.blur });
+  } else {
+    const k = seg(t, 2, 2.6);
+    // hero thekua spinning in behind the title
+    const s = lerp(2.2, 1.05, eOutExpo(k)), rot = lerp(-1.4, -.12, eOutExpo(k)) + (t - 2) * .03;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 900, 700, 'rgba(255,150,40,A)', .35 * eOutCubic(k)); ctx.restore();
+    drawImgC(A.thekua[0], CX, 930, s, rot, eOutCubic(seg(t, 2, 2.25)), 1.2);
+    const ts = lerp(1.6, 1, eOutExpo(seg(t, 2, 2.5)));
+    goldText('ठेकुआ', CX, 560, 300, 'Rozha', { scale: ts, alpha: seg(t, 2, 2.12), shimmer: seg(t, 2.4, 3.4), glow: .5 * (1 - seg(t, 2, 3)) + .15 });
+    const e3 = tin(t, 2.5, 4.0, .45, .2);
+    goldText('बिहार का असली स्वाद', CX, 1250 + e3.y, 84, 'Yatra', { alpha: e3.a, blur: e3.blur, colors: ['#fff8e6', '#ffe2a0', '#f0b75a'] });
+    const e4 = tin(t, 2.8, 4.0, .45, .2);
+    plainText('अब आपके द्वारका में', CX, 1350 + e4.y, 66, 'Yatra', '#fff1d8', { alpha: e4.a, blur: e4.blur });
+  }
+}
+
+// ---- S2 4-10: ingredients, one per beat-pair
+const ING = [
+  { hi: 'गेहूँ का आटा', en: 'WHOLE WHEAT ATTA' },
+  { hi: 'गुड़', en: 'PURE JAGGERY' },
+  { hi: 'देसी घी', en: 'DESI GHEE' },
+  { hi: 'नारियल', en: 'FRESH COCONUT' },
+  { hi: 'सौंफ · इलायची', en: 'FENNEL & CARDAMOM' },
+];
+
+function drawAtta(t, lt) {
+  const x = CX, y = 1150;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 30;
+  const g = ctx.createRadialGradient(x - 90, y - 80, 20, x, y, 420);
+  g.addColorStop(0, '#fffaf0'); g.addColorStop(.5, '#efe0c0'); g.addColorStop(1, '#a88c5c');
+  ctx.beginPath(); ctx.ellipse(x, y, 400, 330, 0, 0, 7); ctx.fillStyle = g; ctx.fill(); ctx.restore();
+  const R = mulberry(7);
+  ctx.save(); ctx.beginPath(); ctx.ellipse(x, y, 400, 330, 0, 0, 7); ctx.clip();
+  for (let i = 0; i < 1500; i++) { ctx.fillStyle = R() < .5 ? 'rgba(150,120,70,.25)' : 'rgba(255,255,250,.35)'; ctx.fillRect(x - 400 + R() * 800, y - 330 + R() * 660, 2, 2); }
+  // well in the centre
+  const wg = ctx.createRadialGradient(x + 20, y + 20, 10, x, y, 150);
+  wg.addColorStop(0, 'rgba(120,90,50,.45)'); wg.addColorStop(1, 'rgba(120,90,50,0)');
+  ctx.fillStyle = wg; ctx.beginPath(); ctx.ellipse(x, y, 160, 130, 0, 0, 7); ctx.fill();
+  ctx.restore();
+  burst(31, x, y - 60, lt - .05, 90, { speed: 900, size: 7, colors: ['rgba(255,250,235,.9)', 'rgba(240,225,195,.8)'], life: 1.0, cone: 3.4, grav: 300 });
+  ctx.save(); ctx.filter = 'blur(30px)'; ctx.globalAlpha = .35 * (1 - seg(lt, 0, 1)); ctx.fillStyle = '#fff5e0'; ctx.beginPath(); ctx.ellipse(x, y - 250 - lt * 150, 360, 180, 0, 0, 7); ctx.fill(); ctx.restore();
+}
+
+function drawJaggery(t, lt) {
+  const pos = [[CX, 1150, 1.5, 0], [CX - 290, 1000, .9, 1], [CX + 300, 1020, 1, 2], [CX - 240, 1380, .85, 3], [CX + 260, 1360, .8, 4]];
+  pos.forEach(([x, y, s, i]) => {
+    const k = eOutBack(seg(lt, i * .06, i * .06 + .4));
+    drawImgC(A.jag[i], x, y - (1 - k) * 300, s * clamp(k, 0, 2), .3 * i + lt * .1 * (i % 2 ? 1 : -1), clamp(k * 3), 1);
+  });
+  // sparkles
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const R = mulberry(17);
+  for (let i = 0; i < 18; i++) { const x = CX + (R() - .5) * 700, y = 1150 + (R() - .5) * 500, p = Math.sin(t * 6 + i) * .5 + .5; glow(x, y, 26 * p + 4, 'rgba(255,220,150,A)', .8 * p); }
+  ctx.restore();
+}
+
+function drawGhee(t, lt) {
+  const x = CX, y = 1200;
+  drawImgC(A.plate, x, y, .62, 0, 1, 1);
+  const g = ctx.createRadialGradient(x - 80, y - 80, 10, x, y, 250);
+  g.addColorStop(0, '#fff2b0'); g.addColorStop(.4, '#f5c643'); g.addColorStop(1, '#c7881a');
+  ctx.beginPath(); ctx.arc(x, y, 245, 0, 7); ctx.fillStyle = g; ctx.fill();
+  // grain of ghee
+  const R = mulberry(12);
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, 245, 0, 7); ctx.clip();
+  for (let i = 0; i < 300; i++) { ctx.fillStyle = `rgba(255,250,220,${R() * .35})`; ctx.beginPath(); ctx.arc(x + (R() - .5) * 490, y + (R() - .5) * 490, R() * 5, 0, 7); ctx.fill(); }
+  // ripple rings from the drop
+  const hit = .35;
+  for (let r = 0; r < 4; r++) {
+    const age = lt - hit - r * .12; if (age < 0) continue;
+    ctx.beginPath(); ctx.arc(x, y, age * 420, 0, 7); ctx.strokeStyle = `rgba(255,250,210,${.6 * (1 - clamp(age / .8))})`; ctx.lineWidth = 6; ctx.stroke();
+  }
+  ctx.restore();
+  // specular highlight
+  ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.beginPath(); ctx.ellipse(x - 90, y - 110, 90, 36, -.6, 0, 7); ctx.fillStyle = 'rgba(255,255,240,.45)'; ctx.filter = 'blur(8px)'; ctx.fill(); ctx.restore();
+  // falling drop
+  if (lt < hit) {
+    const k = eInCubic(lt / hit), dy = lerp(420, y - 10, k);
+    const dg = ctx.createRadialGradient(x - 8, dy - 12, 2, x, dy, 40);
+    dg.addColorStop(0, '#fffbe0'); dg.addColorStop(1, '#e8a91f');
+    ctx.beginPath(); ctx.moveTo(x, dy - 70); ctx.quadraticCurveTo(x + 36, dy, x, dy + 32); ctx.quadraticCurveTo(x - 36, dy, x, dy - 70); ctx.fillStyle = dg; ctx.fill();
+  }
+  burst(41, x, y, lt - hit, 36, { speed: 800, size: 9, colors: ['#ffe07a', '#fff4c0', '#f2b631'], life: .7, cone: 2.6, grav: 1600 });
+}
+
+function drawCoconut(t, lt) {
+  const x = CX, y = 1150, rot = lt * .2;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 30;
+  ctx.beginPath(); ctx.arc(0, 0, 360, 0, 7); ctx.fillStyle = '#5a3217'; ctx.fill(); ctx.shadowColor = 'transparent';
+  const R = mulberry(8);
+  for (let i = 0; i < 600; i++) { const a = R() * 7, d = 330 + R() * 30; ctx.beginPath(); ctx.moveTo(Math.cos(a) * d, Math.sin(a) * d); ctx.lineTo(Math.cos(a + .05) * (d + 12), Math.sin(a + .05) * (d + 12)); ctx.strokeStyle = `rgba(${150 + R() * 60},${90 + R() * 40},50,.6)`; ctx.lineWidth = 2; ctx.stroke(); }
+  const fg = ctx.createRadialGradient(-60, -60, 20, 0, 0, 330);
+  fg.addColorStop(0, '#ffffff'); fg.addColorStop(.8, '#f4efe2'); fg.addColorStop(1, '#d8cdb5');
+  ctx.beginPath(); ctx.arc(0, 0, 325, 0, 7); ctx.fillStyle = fg; ctx.fill();
+  const ig = ctx.createRadialGradient(40, 40, 20, 0, 0, 240);
+  ig.addColorStop(0, '#fbf7ee'); ig.addColorStop(1, '#e2d8c2');
+  ctx.beginPath(); ctx.arc(0, 0, 245, 0, 7); ctx.fillStyle = ig; ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, 245, 0, 7); ctx.strokeStyle = 'rgba(150,130,100,.5)'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.restore();
+  // grated flakes flying
+  const R2 = mulberry(9);
+  for (let i = 0; i < 70; i++) {
+    const a = R2() * 7, d0 = 380 + R2() * 150, k = eOutCubic(seg(lt, 0, .6));
+    const px = x + Math.cos(a) * d0 * (0.4 + .6 * k), py = y + Math.sin(a) * d0 * (0.4 + .6 * k);
+    ctx.save(); ctx.translate(px, py); ctx.rotate(a + lt * 2 * (i % 2 ? 1 : -1));
+    ctx.beginPath(); ctx.ellipse(0, 0, 16, 4.5, 0, 0, 7); ctx.fillStyle = `rgba(255,252,240,${.9 * k})`; ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 8; ctx.fill(); ctx.restore();
+  }
+}
+
+function drawSpice(t, lt) {
+  const R = mulberry(13);
+  for (let i = 0; i < 230; i++) {
+    const a = R() * 7, d = Math.sqrt(R()) * 470, x = CX + Math.cos(a) * d, y = 1150 + Math.sin(a) * d * .9;
+    const k = eOutBack(seg(lt, R() * .3, R() * .3 + .4)), rot = R() * 7;
+    const pod = R() < .07;
+    ctx.save(); ctx.translate(x, y - (1 - k) * 160); ctx.rotate(rot); ctx.scale(k, k);
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
+    if (pod) {
+      const g = ctx.createLinearGradient(0, -18, 0, 18); g.addColorStop(0, '#b6d27a'); g.addColorStop(1, '#5d7a2a');
+      ctx.beginPath(); ctx.ellipse(0, 0, 44, 22, 0, 0, 7); ctx.fillStyle = g; ctx.fill(); ctx.shadowColor = 'transparent';
+      ctx.beginPath(); ctx.moveTo(-40, 0); ctx.quadraticCurveTo(0, 8, 40, 0); ctx.strokeStyle = 'rgba(40,60,10,.5)'; ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(0, 0, 20, 7, 0, 0, 7); ctx.fillStyle = R() < .5 ? '#9ea34e' : '#b3a85a'; ctx.fill(); ctx.shadowColor = 'transparent';
+      ctx.beginPath(); ctx.moveTo(-17, 0); ctx.lineTo(17, 0); ctx.strokeStyle = 'rgba(60,60,20,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(-2, -2.5, 12, 1.8, 0, 0, 7); ctx.fillStyle = 'rgba(255,250,200,.35)'; ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+const ING_DRAW = [drawAtta, drawJaggery, drawGhee, drawCoconut, drawSpice];
+
+function scene2(t) {
+  if (t >= 9) return sceneMerge(t);
+  const i = Math.min(4, Math.floor(t - 4)), t0 = 4 + i, lt = t - t0;
+  woodBg(.5 + .06 * i);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1150, 800, 'rgba(255,160,70,A)', .16); ctx.restore();
+  // camera push per cut
+  const z = 1.12 - .12 * eOutExpo(seg(lt, 0, .5)) + lt * .03;
+  ctx.save(); ctx.translate(CX, 1150); ctx.scale(z, z); ctx.rotate((i % 2 ? 1 : -1) * .02 * (1 - lt)); ctx.translate(-CX, -1150);
+  ING_DRAW[i](t, lt);
+  ctx.restore();
+  // counter + labels
+  const e = tin(t, t0 + .05, t0 + 1, .3, .12);
+  plainText(`0${i + 1}`, CX, 330 + e.y * .5, 40, 'Poppins', '#f3b451', { style: '600', spacing: 10, alpha: e.a });
+  ctx.save(); ctx.globalAlpha = e.a; ctx.fillStyle = '#f3b451'; ctx.fillRect(CX - 40 * e.a, 370, 80 * e.a, 3); ctx.restore();
+  goldText(ING[i].hi, CX, 480 + e.y, ING[i].hi.length > 8 ? 130 : 170, 'Rozha', { alpha: e.a, blur: e.blur, shimmer: seg(lt, .2, .9) });
+  letters(ING[i].en, CX, 640, 44, 'Poppins', '#fff4df', t, t0 + .12, { style: '600', spacing: 8, stagger: .015, end: t0 + 1 });
+}
+
+// 9-10: everything swirls into one dough ball
+function sceneMerge(t) {
+  const lt = t - 9;
+  woodBg(.6);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1100, 900, 'rgba(255,160,70,A)', .2 + .2 * lt); ctx.restore();
+  const R = mulberry(77);
+  const cols = ['#efe2c4', '#b7671f', '#f5c643', '#fbf7ee', '#9ea34e'];
+  for (let i = 0; i < 160; i++) {
+    const a0 = R() * 7, d0 = 300 + R() * 600, k = eInOut(seg(lt, 0, .75));
+    const a = a0 + k * 5, d = d0 * (1 - k);
+    ctx.globalAlpha = 1 - seg(lt, .6, .8);
+    ctx.fillStyle = cols[i % 5]; ctx.beginPath(); ctx.arc(CX + Math.cos(a) * d, 1100 + Math.sin(a) * d, 8 + R() * 16, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  const bk = eOutBack(seg(lt, .55, 1));
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1100, 500, 'rgba(255,200,120,A)', .3 * bk); ctx.restore();
+  drawImgC(A.dough, CX, 1100, bk * 1.35, lt, clamp(bk * 2), 1);
+  const e = tin(t, 9.05, 10, .35, .15);
+  goldText('प्यार से गूँधा', CX, 480 + e.y, 140, 'Rozha', { alpha: e.a, blur: e.blur });
+  plainText('KNEADED WITH LOVE', CX, 620, 44, 'Poppins', '#fff4df', { style: '600', spacing: 8, alpha: e.a });
+}
+
+// ---- S3 10-15: sancha mould press, then kadhai frying
+function mould(x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 30;
+  const g = ctx.createLinearGradient(-420, -380, 420, 380); g.addColorStop(0, '#8a5a32'); g.addColorStop(1, '#4a2b14');
+  ctx.beginPath(); ctx.roundRect(-420, -380, 840, 760, 60); ctx.fillStyle = g; ctx.fill(); ctx.shadowColor = 'transparent';
+  const R = mulberry(4);
+  ctx.save(); ctx.clip();
+  for (let i = 0; i < 60; i++) { const yy = -380 + R() * 760; ctx.beginPath(); ctx.moveTo(-420, yy); for (let xx = -420; xx <= 420; xx += 20) ctx.lineTo(xx, yy + Math.sin(xx * .01 + i) * 6); ctx.strokeStyle = `rgba(30,15,5,${R() * .35})`; ctx.lineWidth = 1 + R() * 2; ctx.stroke(); }
+  ctx.restore();
+  // carved cavity
+  const cg = ctx.createRadialGradient(40, 40, 30, 0, 0, 320); cg.addColorStop(0, '#6b4222'); cg.addColorStop(1, '#2e1808');
+  ctx.beginPath(); ctx.ellipse(0, 0, 300, 245, 0, 0, 7); ctx.fillStyle = cg; ctx.fill();
+  for (let i = 0; i < 15; i++) { const a = lerp(-1.25, 1.25, i / 14); ctx.beginPath(); ctx.moveTo(0, 210); ctx.quadraticCurveTo(Math.sin(a) * 180, 210 - Math.cos(a) * 200, Math.sin(a) * 300, 210 - Math.cos(a) * 400); ctx.strokeStyle = 'rgba(150,100,60,.35)'; ctx.lineWidth = 5; ctx.stroke(); }
+  ctx.beginPath(); ctx.ellipse(0, 0, 300, 245, 0, 0, 7); ctx.strokeStyle = 'rgba(20,10,2,.8)'; ctx.lineWidth = 10; ctx.stroke();
+  ctx.restore();
+}
+
+function scene3(t) {
+  if (t >= 12.5) return sceneFry(t);
+  const lt = t - 10;
+  woodBg(.55);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1100, 900, 'rgba(255,150,60,A)', .22); ctx.restore();
+  const lift = eInOut(seg(lt, 1.4, 2.3));
+  const my = 1120 + lift * 900;
+  const press1 = Math.exp(-Math.max(0, lt - .5) * 10) * (lt > .5), press2 = Math.exp(-Math.max(0, lt - 1.0) * 10) * (lt > 1.0);
+  const shake = (press1 + press2) * 10 * Math.sin(lt * 90);
+  ctx.save(); ctx.translate(shake, 0);
+  mould(CX, my, 1.0 - .02 * (press1 + press2));
+  // dough drop and press
+  if (lt < .5) {
+    const k = eInCubic(seg(lt, 0, .5));
+    drawImgC(A.dough, CX, lerp(700, 1120, k), lerp(1.6, .95, k), lt * 2, 1, lerp(2, .6, k));
+  } else {
+    const pk = seg(lt, .5, 1.1);
+    const img = pk < 1 ? A.rawPlain : A.raw;
+    const liftS = 1 + lift * .45, y = lerp(1120, 1080, lift);
+    drawImgC(A.rawPlain, CX, y, 0.98 * liftS, lift * .2, 1 - seg(lt, .95, 1.1), .6 + lift);
+    drawImgC(A.raw, CX, y, 0.98 * liftS, lift * .2, seg(lt, .95, 1.1), .6 + lift * 1.2);
+    if (lt < .6) drawImgC(A.dough, CX, 1120, lerp(.95, 1.3, seg(lt, .5, .6)), 1, 1 - seg(lt, .5, .6));
+  }
+  burst(51, CX, 1120, lt - .5, 60, { speed: 1100, size: 6, colors: ['rgba(255,250,235,.8)'], life: .8, cone: 7 });
+  burst(52, CX, 1120, lt - 1.0, 60, { speed: 1300, size: 5, colors: ['rgba(255,250,235,.8)'], life: .8, cone: 7 });
+  ctx.restore();
+  const e = tin(t, 10.2, 12.5, .4, .2);
+  goldText('हाथ से बना,', CX, 380 + e.y, 120, 'Rozha', { alpha: e.a, blur: e.blur });
+  const e2 = tin(t, 10.6, 12.5, .4, .2);
+  goldText('साँचे में ढला', CX, 520 + e2.y, 120, 'Rozha', { alpha: e2.a, blur: e2.blur, shimmer: seg(t, 11, 12) });
+  plainText('HAND-PRESSED IN A WOODEN SANCHA', CX, 650, 36, 'Poppins', '#fff4df', { style: '600', spacing: 5, alpha: tin(t, 11.0, 12.5, .4, .2).a });
+}
+
+function sceneFry(t) {
+  const lt = t - 12.5;
+  ctx.fillStyle = '#060302'; ctx.fillRect(0, 0, W, H);
+  const kx = CX, ky = 1150;
+  const z = 1.05 + lt * .04;
+  ctx.save(); ctx.translate(kx, ky); ctx.scale(z, z); ctx.translate(-kx, -ky);
+  // flame glow from beneath
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(kx, ky, 1000, 'rgba(255,100,20,A)', .3 + .05 * Math.sin(t * 20)); ctx.restore();
+  // iron kadhai
+  const kg = ctx.createRadialGradient(kx - 150, ky - 150, 50, kx, ky, 720);
+  kg.addColorStop(0, '#4a4642'); kg.addColorStop(.7, '#1d1b1a'); kg.addColorStop(1, '#0a0909');
+  ctx.beginPath(); ctx.arc(kx, ky, 700, 0, 7); ctx.fillStyle = kg; ctx.fill();
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.ellipse(kx + sx * 720, ky, 70, 40, 0, 0, 7); ctx.strokeStyle = '#2c2a28'; ctx.lineWidth = 22; ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(kx, ky, 700, 0, 7); ctx.strokeStyle = 'rgba(200,190,180,.25)'; ctx.lineWidth = 6; ctx.stroke();
+  // ghee/oil
+  const og = ctx.createRadialGradient(kx - 100, ky - 120, 40, kx, ky, 600);
+  og.addColorStop(0, '#f0b940'); og.addColorStop(.55, '#b8741a'); og.addColorStop(1, '#4a2806');
+  ctx.beginPath(); ctx.arc(kx, ky, 600, 0, 7); ctx.fillStyle = og; ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(kx, ky, 600, 0, 7); ctx.clip();
+  // thekuas turning golden
+  const done = eInOut(seg(lt, .2, 2.0));
+  const P = [[-210, -170, .75, .4], [230, -110, .72, -.7], [-20, 230, .78, 1.9]];
+  P.forEach(([dx, dy, s, r], i) => {
+    const x = kx + dx + Math.sin(t * 1.3 + i) * 12, y = ky + dy + Math.cos(t * 1.1 + i) * 10, rot = r + t * .15 * (i % 2 ? 1 : -1);
+    drawImgC(A.raw, x, y, s, rot, 1, .3);
+    drawImgC(A.thekua[i], x, y, s, rot, done);
+  });
+  // bubbles
+  const R = mulberry(61);
+  for (let i = 0; i < 260; i++) {
+    const cyc = .4 + R() * .6, ph = R(), age = ((t + ph * cyc) % cyc) / cyc;
+    const pidx = Math.floor(R() * 3), [dx, dy] = P[pidx], a = R() * 7, d = 190 + R() * 90;
+    const x = kx + dx + Math.cos(a) * d, y = ky + dy + Math.sin(a) * d * .85, r = 3 + R() * 11 * age;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.strokeStyle = `rgba(255,245,210,${.55 * (1 - age)})`; ctx.lineWidth = 2; ctx.stroke();
+  }
+  // oil sheen
+  ctx.globalCompositeOperation = 'screen';
+  const sh = ctx.createRadialGradient(kx - 220, ky - 260, 10, kx - 220, ky - 260, 400);
+  sh.addColorStop(0, 'rgba(255,240,200,.35)'); sh.addColorStop(1, 'rgba(255,240,200,0)'); ctx.fillStyle = sh; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  ctx.restore();
+  steam(kx, ky - 350, t, .8, 500);
+  const words = [['Golden.', 13.0], ['Crispy.', 13.5], ['Perfect.', 14.0]];
+  words.forEach(([w, a], i) => {
+    const k = eOutBack(seg(t, a, a + .3)), o = 1 - seg(t, 14.8, 15);
+    plainText(w, CX, 250 + i * 130 + (1 - k) * 40, 118, 'Playfair', i === 2 ? '#ffd46b' : '#fff1d6', { style: 'italic 800', alpha: clamp(k) * o, scale: lerp(1.4, 1, clamp(k)) });
+  });
+  const e = tin(t, 12.6, 15, .4, .2);
+  plainText('देसी घी में धीमी आँच पर तला', CX, 1830 + e.y * .3, 52, 'Yatra', '#ffe7bf', { alpha: e.a });
+}
+
+// ---- S4 15-20: hero plate, then the crunch
+function plateScene(t, rot, cam = 1) {
+  woodBg(.5);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1150, 1000, 'rgba(255,150,60,A)', .25); ctx.restore();
+  ctx.save(); ctx.translate(CX, 1150); ctx.scale(cam, cam); ctx.translate(-CX, -1150);
+  drawImgC(A.leaf, CX, 1170, 1.0, -.35, 1, 1);
+  drawImgC(A.plate, CX, 1150, .92, rot * .3, 1, 1.2);
+  const ring = 7;
+  for (let i = 0; i < ring; i++) {
+    const a = rot + i / ring * Math.PI * 2;
+    drawImgC(A.thekua[i % A.thekua.length], CX + Math.cos(a) * 250, 1150 + Math.sin(a) * 250, .46, a + Math.PI / 2, 1, .8);
+  }
+  drawImgC(A.thekua[3], CX, 1150, .56, rot * 1.5 + .3, 1, 1.1);
+  ctx.restore();
+}
+
+function lightSweep(t, a, b, amt = .35) {
+  const k = seg(t, a, b); if (k <= 0 || k >= 1) return;
+  ctx.save(); ctx.globalCompositeOperation = 'screen';
+  const x = lerp(-600, W + 600, eInOut(k));
+  const g = ctx.createLinearGradient(x - 300, 0, x + 300, 300);
+  g.addColorStop(0, 'rgba(255,220,160,0)'); g.addColorStop(.5, `rgba(255,220,160,${amt})`); g.addColorStop(1, 'rgba(255,220,160,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+}
+
+function scene4(t) {
+  const lt = t - 15;
+  if (t < 18.5) {
+    const cam = 1.18 - .12 * eOutExpo(seg(lt, 0, .6)) + lt * .025;
+    plateScene(t, lt * .12, cam);
+    steam(CX, 950, t, 1, 420);
+    bokeh(t, .7);
+    diya(170, 1820, .75, t); diya(W - 150, 1840, .7, t + 1.3);
+    lightSweep(t, 15.3, 17.3);
+    const e = tin(t, 15.3, 18.5, .45, .2);
+    goldText('बाहर से कुरकुरा,', CX, 330 + e.y, 118, 'Rozha', { alpha: e.a, blur: e.blur, shimmer: seg(t, 15.6, 16.6) });
+    const e2 = tin(t, 16.1, 18.5, .45, .2);
+    goldText('अंदर से नरम', CX, 480 + e2.y, 118, 'Rozha', { alpha: e2.a, blur: e2.blur, shimmer: seg(t, 16.4, 17.4) });
+    plainText('Crunchy outside, melt-in-mouth inside', CX, 610, 46, 'Playfair', '#fff1d6', { style: 'italic 500', alpha: tin(t, 16.8, 18.5, .4, .2).a });
+  } else {
+    // macro crunch: one thekua snaps in half
+    const k = t - 18.5;
+    woodBg(.62);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1050, 900, 'rgba(255,150,60,A)', .3); ctx.restore();
+    const sep = eOutExpo(seg(k, 0, .5)) * 45, tilt = eOutExpo(seg(k, 0, .5)) * .12;
+    const s = 1.3 + k * .08, img = A.thekua[0];
+    for (const side of [-1, 1]) {
+      ctx.save(); ctx.translate(CX + side * sep, 1050 + side * sep * .3); ctx.rotate(side * tilt);
+      ctx.beginPath();
+      // jagged break line
+      const pts = []; const R = mulberry(88);
+      for (let i = 0; i <= 14; i++) pts.push([(R() - .5) * 40 + (i % 2 ? 18 : -18), -600 + i * 86]);
+      if (side < 0) { ctx.moveTo(-800, -700); pts.forEach(p => ctx.lineTo(p[0], p[1])); ctx.lineTo(-800, 700); }
+      else { ctx.moveTo(800, -700); pts.forEach(p => ctx.lineTo(p[0], p[1])); ctx.lineTo(800, 700); }
+      ctx.closePath(); ctx.clip();
+      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 30;
+      ctx.scale(s, s); ctx.rotate(-.1); ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      ctx.restore();
+    }
+    burst(91, CX, 1050, k, 110, { speed: 1500, size: 9, colors: ['#c67a2c', '#e8a64d', '#8a4a17', '#f3c677'], life: 1.4, cone: 7, grav: 1400 });
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1050, 400, 'rgba(255,230,170,A)', .5 * (1 - seg(k, 0, .3))); ctx.restore();
+    const kk = eOutBack(seg(k, .05, .4));
+    plainText('Crrrunch!', CX, 420, 170, 'Playfair', '#ffd46b', { style: 'italic 900', alpha: clamp(kk) * (1 - seg(t, 19.8, 20)), scale: lerp(1.6, 1, clamp(kk)), shadowBlur: 40 });
+    plainText('हर बाइट में', CX, 1640, 70, 'Yatra', '#fff1d6', { alpha: tin(t, 18.9, 20, .35, .2).a });
+  }
+}
+
+// ---- S5 20-25: promises, one per second
+const PROPS = [
+  { big: '100%', hi: 'घर का बना', en: 'HOMEMADE, SMALL BATCHES' },
+  { big: 'शुद्ध', hi: 'देसी घी', en: 'PURE DESI GHEE ONLY', dev: true },
+  { big: '0', hi: 'प्रिज़र्वेटिव', en: 'NO PRESERVATIVES' },
+  { big: 'ताज़ा', hi: 'हर हफ़्ते', en: 'FRESH BATCH EVERY WEEK', dev: true },
+  { big: 'DWARKA', hi: 'हर सेक्टर तक', en: 'HOME DELIVERY · SECTORS 1–29' },
+];
+
+function scene5(t) {
+  const lt = t - 20, i = Math.min(4, Math.floor(lt)), pt = lt - i;
+  // blurred rotating plate behind
+  ctx.drawImage(A.blurPlate, 0, 0);
+  ctx.fillStyle = 'rgba(10,4,1,.55)'; ctx.fillRect(0, 0, W, H);
+  bokeh(t, 1.1);
+  // stamp ring
+  const k = eOutBack(seg(pt, 0, .35)), out = seg(pt, .85, 1);
+  const s = k * (1 - .25 * out), a = clamp(k) * (1 - out);
+  ctx.save(); ctx.translate(CX, 900); ctx.scale(s, s); ctx.rotate(t * .4); ctx.globalAlpha = a;
+  ctx.beginPath(); ctx.arc(0, 0, 330, 0, 7); ctx.strokeStyle = '#f3b451'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.setLineDash([4, 18]); ctx.beginPath(); ctx.arc(0, 0, 360, 0, 7); ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(0, 0, 300, 0, 7); ctx.strokeStyle = 'rgba(243,180,81,.4)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = a * .5; ctx.beginPath(); ctx.arc(CX, 900, 295 * s, 0, 7); ctx.fillStyle = 'rgba(30,12,3,.7)'; ctx.fill(); ctx.restore();
+  const P = PROPS[i];
+  const bigSize = P.big.length > 4 && !P.dev ? 120 : P.dev ? 170 : 200;
+  goldText(P.big, CX, 860, bigSize, P.dev ? 'Rozha' : 'Poppins', { alpha: a, scale: s, style: P.dev ? '' : '600', shimmer: seg(pt, .15, .8), spacing: P.dev ? 0 : 2 });
+  goldText(P.hi, CX, 1010, 72, 'Yatra', { alpha: a, scale: s, colors: ['#fff8e6', '#ffe2a0', '#f0b75a'] });
+  letters(P.en, CX, 1440, 46, 'Poppins', '#fff4df', t, 20 + i + .1, { style: '600', spacing: 6, stagger: .012, end: 20 + i + 1 });
+  if (i === 4) {
+    // sector numbers orbiting in — local pride
+    const R = mulberry(29);
+    for (let n = 1; n <= 29; n++) {
+      const ang = R() * 7, d = lerp(900, 420 + R() * 60, eOutExpo(seg(pt, n * .012, n * .012 + .5)));
+      plainText(`${n}`, CX + Math.cos(ang + t * .3) * d, 900 + Math.sin(ang + t * .3) * d * 1.08, 34 + R() * 20, 'Poppins', `rgba(255,${190 + R() * 60},120,.9)`, { style: '600', alpha: 1 - seg(pt, .85, 1) });
+    }
+  }
+  // progress pips
+  for (let j = 0; j < 5; j++) { ctx.beginPath(); ctx.arc(CX - 100 + j * 50, 1620, j === i ? 11 : 7, 0, 7); ctx.fillStyle = j === i ? '#f3b451' : 'rgba(255,240,220,.35)'; ctx.fill(); }
+}
+
+// ---- S6 25-30: end card with CTA
+function garland(y, t) {
+  const R = mulberry(3);
+  for (let s = 0; s < 3; s++) {
+    const x0 = s * W / 3, x1 = (s + 1) * W / 3, sag = 150 + s * 10;
+    for (let i = 0; i <= 12; i++) {
+      const k = i / 12, x = lerp(x0, x1, k), yy = y + Math.sin(k * Math.PI) * sag + Math.sin(t * 1.5 + s) * 6 * Math.sin(k * Math.PI);
+      drawImgC(A.mari[(i + s) % A.mari.length], x, yy, .6 + R() * .1, R() * 7, 1, .25);
+    }
+  }
+  for (let s = 0; s <= 3; s++) {
+    const x = s * W / 3;
+    for (let j = 0; j < 4; j++) drawImgC(A.mari[(s + j) % A.mari.length], x, y + j * 70 + 20, .56, j, 1, .25);
+  }
+}
+
+function scene6(t) {
+  const lt = t - 25;
+  woodBg(.58);
+  bokeh(t, 1.1);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(CX, 1400, 900, 'rgba(255,150,60,A)', .3); ctx.restore();
+  // plate rising in from the bottom
+  const pk = eOutExpo(seg(lt, 0, .8));
+  ctx.save(); ctx.translate(0, (1 - pk) * 600); ctx.translate(CX, 1650); ctx.scale(.74, .74); ctx.translate(-CX, -1150);
+  drawImgC(A.leaf, CX, 1170, 1.0, -.35, 1, 1);
+  drawImgC(A.plate, CX, 1150, .92, lt * .03, 1, 1.2);
+  for (let i = 0; i < 7; i++) { const a = lt * .06 + i / 7 * Math.PI * 2; drawImgC(A.thekua[i % A.thekua.length], CX + Math.cos(a) * 250, 1150 + Math.sin(a) * 250, .46, a + Math.PI / 2, 1, .8); }
+  drawImgC(A.thekua[3], CX, 1150, .56, .3 + lt * .09, 1, 1.1);
+  ctx.restore();
+  steam(CX, 1450, t, .9, 380);
+  diya(150, 1830, .7, t); diya(W - 130, 1850, .66, t + 1.1);
+  // garland drops in
+  ctx.save(); ctx.translate(0, -(1 - eOutBack(seg(lt, .1, .7))) * 400); garland(-40, t); ctx.globalCompositeOperation = 'lighter'; glow(CX, 60, 700, 'rgba(255,140,30,A)', .18); ctx.restore();
+
+  const hit = Math.exp(-Math.max(0, lt - 3) * 4) * (lt > 3);
+  goldText('ठेकुआ', CX, 540, 260, 'Rozha', { alpha: seg(lt, .15, .4), scale: lerp(1.5, 1, eOutExpo(seg(lt, .15, .6))) * (1 + .04 * hit), shimmer: seg(lt, .6, 1.6) + seg(lt, 3, 4) - 1, glow: .2 + .4 * hit });
+  plainText(BRAND.toUpperCase(), CX, 720, 50, 'Poppins', '#ffe3b0', { style: '600', spacing: 14, alpha: tin(t, 25.4, 30.5, .4, .1).a });
+  const d1 = tin(t, 25.55, 30.5, .4, .1);
+  ctx.save(); ctx.globalAlpha = d1.a; ctx.fillStyle = '#f3b451'; ctx.fillRect(CX - 170, 772, 340, 3); ctx.restore();
+  plainText('HOMEMADE · ' + AREA, CX, 820, 34, 'Poppins', '#fff1d6', { style: '500', spacing: 5, alpha: d1.a });
+
+  // WhatsApp CTA pill
+  const ck = eOutBack(seg(lt, .8, 1.25)), cp = 1 + .035 * Math.sin(lt * Math.PI * 4) * seg(lt, 1.3, 1.5);
+  ctx.save(); ctx.translate(CX, 975); ctx.scale(ck * cp, ck * cp); ctx.globalAlpha = clamp(ck);
+  ctx.shadowColor = 'rgba(37,211,102,.55)'; ctx.shadowBlur = 50;
+  ctx.beginPath(); ctx.roundRect(-380, -62, 760, 124, 62); const pg = ctx.createLinearGradient(0, -62, 0, 62); pg.addColorStop(0, '#34e27a'); pg.addColorStop(1, '#16a34a'); ctx.fillStyle = pg; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  // chat bubble glyph
+  ctx.beginPath(); ctx.arc(-318, 0, 32, 0, 7); ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-344, 20); ctx.lineTo(-354, 40); ctx.lineTo(-331, 30); ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(-318, 0, 11, 0, 7); ctx.fill();
+  ctx.font = '600 46px Poppins'; ctx.letterSpacing = '2px'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+  ctx.fillText('ORDER ON WHATSAPP', 36, 4);
+  ctx.restore();
+  plainText(PHONE, CX, 1110, 64, 'Poppins', '#ffffff', { style: '600', spacing: 4, alpha: tin(t, 26.0, 30.5, .4, .1).a });
+  plainText('छठ स्पेशल · चाय के साथ परफ़ेक्ट', CX, 1210, 50, 'Yatra', '#ffd9a0', { alpha: tin(t, 26.4, 30.5, .4, .1).a });
+}
+
+// ============================================================ POST + TIMELINE
+const CUTS = [2, 4, 5, 6, 7, 8, 9, 10, 12.5, 15, 18.5, 20, 21, 22, 23, 24, 25, 28];
+
+function post(t) {
+  // warm grade + vignette
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(255,170,90,.18)'; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+  const v = ctx.createRadialGradient(CX, CY, H * .3, CX, CY, H * .72);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.72)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  // drifting light leak
+  ctx.globalCompositeOperation = 'screen';
+  const lx = W * (.5 + .6 * Math.sin(t * .35)), ly = H * (.3 + .25 * Math.cos(t * .27));
+  const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 900);
+  lg.addColorStop(0, 'rgba(255,120,40,.13)'); lg.addColorStop(1, 'rgba(255,120,40,0)');
+  ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
+  // flash on cuts
+  let flash = 0;
+  for (const c of CUTS) if (t >= c && t < c + .25) flash = Math.max(flash, (1 - (t - c) / .25) * (c === 2 || c === 25 || c === 15 || c === 28 ? .55 : .22));
+  if (flash > 0) { ctx.fillStyle = `rgba(255,225,180,${flash})`; ctx.fillRect(0, 0, W, H); }
+  // film grain
+  ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = .09;
+  ctx.drawImage(A.grain[Math.floor(t * 24) % A.grain.length], 0, 0, W, H);
+  ctx.restore();
+  // letterbox thin cinematic bars + fade in/out
+  const fade = Math.max(1 - seg(t, 0, .25), seg(t, 29.55, 30));
+  if (fade > 0) { ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, W, H); }
+}
+
+function render(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+  // punch-zoom on every cut + beat bounce
+  let punch = 0;
+  for (const c of CUTS) if (t >= c && t < c + .4) punch = Math.max(punch, (1 - eOutExpo((t - c) / .4)) * .07);
+  const z = 1 + punch + .008 * pulse(t, 4, 25);
+  ctx.save(); ctx.translate(CX, CY); ctx.scale(z, z); ctx.translate(-CX, -CY);
+  if (t < 4) scene1(t);
+  else if (t < 10) scene2(t);
+  else if (t < 15) scene3(t);
+  else if (t < 20) scene4(t);
+  else if (t < 25) scene5(t);
+  else scene6(t);
+  ctx.restore();
+  post(t);
+}
+
+async function init() {
+  await Promise.all([
+    document.fonts.load('100px Rozha', 'ठेकुआ'), document.fonts.load('100px Yatra', 'ठेकुआ'),
+    document.fonts.load('italic 800 100px Playfair'), document.fonts.load('600 100px Poppins'), document.fonts.load('500 100px Poppins'),
+  ]);
+  A.thekua = [101, 202, 303, 404, 505].map(s => makeThekua(s, 1, 1));
+  A.raw = makeThekua(101, 0, 1);
+  A.rawPlain = makeThekua(101, 0, 0);
+  A.dough = makeDoughBall();
+  A.wood = makeWood();
+  A.plate = makeBrassPlate();
+  A.leaf = makeLeaf();
+  A.mari = [1, 2, 3, 4].map(s => makeMarigold(s));
+  A.jag = [1, 2, 3, 4, 5].map(s => makeJaggery(s * 7));
+  A.grain = makeGrain();
+  // pre-blurred plate backdrop for the promise cards
+  plateScene(0, .6, 1.25);
+  A.blurPlate = mk(W, H);
+  const bg = A.blurPlate.getContext('2d'); bg.filter = 'blur(26px)'; bg.drawImage(cv, 0, 0);
+  window.READY = true;
+}
+
+window.renderFrame = t => { render(t); };
+window.frameJPEG = (t, q = .93) => { render(t); return cv.toDataURL('image/jpeg', q); };
+init();
+
+// live preview when opened directly in a browser
+if (!/[?&]capture/.test(location.search)) {
+  const t0 = performance.now();
+  const loop = () => { if (window.READY) render(((performance.now() - t0) / 1000) % 30); requestAnimationFrame(loop); };
+  loop();
+}
+</script>
+</body>
+</html>
