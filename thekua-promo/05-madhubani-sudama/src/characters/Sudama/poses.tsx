@@ -65,3 +65,20 @@ export const SUDAMA_POSES: { id: string; hi: string; en: string; spec: FigureSpe
 ];
 
 export const SudamaPose: React.FC<{ spec: FigureSpec }> = ({ spec }) => <Figure spec={spec} />;
+
+// added for the film: waiting at the gate with the potli, and a grateful namaste
+export const wait: FigureSpec = {
+  kind: 'sudama', lean: 2,
+  head: { eye: 'open', mouth: 'neutral', tilt: 3 },
+  legNear: { knee: [12, -176], ankle: [16, -16] }, legFar: { knee: [-12, -176], ankle: [-18, -16] },
+  armFar: [[-18, -590, 0], [-4, -500, 0], [8, -430, 0]], handFar: 'open',
+  armNear: [[10, -586, 0], [52, -512, 0], [78, -566, 0]], handNear: 'hold',
+  holdNear: <Potli x={98} y={-526} s={0.95} />,
+};
+export const namaste: FigureSpec = {
+  kind: 'sudama',
+  head: { eye: 'closed', mouth: 'smile', tilt: 4, tear: true },
+  legNear: { knee: [12, -176], ankle: [16, -16] }, legFar: { knee: [-12, -176], ankle: [-18, -16] },
+  armFar: [[-18, -590, 0], [36, -516, 0], [60, -586, 0]], handFar: 'up',
+  armNear: [[10, -586, 0], [58, -512, 0], [70, -584, 0]], handNear: 'up',
+};

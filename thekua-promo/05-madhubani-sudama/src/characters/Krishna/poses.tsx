@@ -77,3 +77,13 @@ export const KRISHNA_POSES: { id: string; hi: string; en: string; spec: FigureSp
   { id: 'pull', hi: 'पोटली खींचना', en: 'pulling the potli', spec: pull },
   { id: 'eat', hi: 'चिवड़ा खाना', en: 'eating the chivda', spec: eat },
 ];
+
+// added for the film: relaxed standing, hand on hip
+export const stand: FigureSpec = {
+  kind: 'krishna',
+  head: { eye: 'open', mouth: 'smile', tilt: 2 },
+  legNear: { knee: [16, -176], ankle: [26, -16] }, legFar: { knee: [-14, -176], ankle: [-22, -16] },
+  armFar: [[-18, -590, 0], [-70, -520, 0], [-38, -462, 0]], handFar: 'hold',
+  armNear: [[10, -586, 0], [26, -500, 0], [38, -420, 0]], handNear: 'open',
+  holdFar: fluteTucked,
+};

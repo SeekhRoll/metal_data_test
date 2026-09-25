@@ -319,3 +319,7 @@ const ArmBand: React.FC<{ sp: Spine }> = ({ sp }) => {
   const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
   return <g transform={`translate(${x} ${y}) rotate(${ang})`}><rect x={-6} y={-15} width={12} height={30} rx={3} fill={C.turmeric} stroke={C.black} strokeWidth={2.2} /></g>;
 };
+
+// idle life: swap to the closed-eye drawing for a blink (only for drawings whose eyes are open)
+export const withBlink = (s: FigureSpec, blink: boolean): FigureSpec =>
+  blink && (s.head.eye ?? 'open') === 'open' ? { ...s, head: { ...s.head, eye: 'closed' } } : s;

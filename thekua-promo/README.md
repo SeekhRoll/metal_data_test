@@ -8,6 +8,7 @@ These are vertical (9:16) promos for homemade thekua, sized for Instagram Reels,
 | [`02-hand-drawn/`](02-hand-drawn) | Cute doodle animation | Wobbly ink lines, pastel crayon, kawaii characters, bouncy marimba |
 | [`03-ghar-ki-mithas/`](03-ghar-ki-mithas) | "घर की मिठास" (the sweetness of home) | Vivid flat illustration, one continuous shot through family life, bansuri and santoor |
 | [`04-van-gogh-dussehra/`](04-van-gogh-dussehra) | Dussehra in the style of Van Gogh | Painted with ~150k GPU brush strokes: swirling Starry Night sky, Ravan Dahan, sunflower fireworks, thekua still life |
+| [`05-madhubani-sudama/`](05-madhubani-sudama) | "सुदामा की पोटली": Madhubani story series, Episode 1 (60 s) | Remotion + SVG Madhubani painting: bharni double lines, replacement-drawing animation on twos, Gita 9.26 moral, sticker-style end card |
 
 Every concept folder has the same layout:
 
@@ -68,4 +69,4 @@ node render.js 03-ghar-ki-mithas           # -> 03-ghar-ki-mithas/output/{promo.
 node render.js 03-ghar-ki-mithas --stills 4.4,9.5,14   # quick JPG previews in <concept>/build/
 ```
 
-To start a new concept, copy a concept folder to a new number (for example `05-madhubani-chhath`), edit its `promo.html` and `soundtrack.py`, and run the same two commands. Shared fonts live in `fonts/`.
+To start a new concept, copy a concept folder to a new number (for example `06-madhubani-chhath`), edit its `promo.html` and `soundtrack.py`, and run the same two commands. Shared fonts live in `fonts/`.
