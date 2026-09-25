@@ -4,7 +4,7 @@ Bhangra-flavoured groove at 120 BPM: dhol, tumbi riff, sitar plucks,
 shehnai lead, tanpura drone, risers and impacts. Section boundaries match
 the scene timeline in promo.html (every cut lands on a beat).
 
-    python3 soundtrack.py  ->  build/soundtrack.wav
+    python3 01-cinematic/soundtrack.py  ->  01-cinematic/build/soundtrack.wav
 """
 import os
 import wave
@@ -12,6 +12,7 @@ import wave
 import numpy as np
 from scipy.signal import fftconvolve, butter, sosfilt
 
+OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
 SR = 44100
 DUR = 30.0
 BPM = 120
@@ -357,11 +358,11 @@ mix /= np.max(np.abs(mix)) + 1e-9
 mix = np.tanh(1.8 * mix) / np.tanh(1.8)
 mix *= 0.93
 
-os.makedirs("build", exist_ok=True)
+os.makedirs(OUT_DIR, exist_ok=True)
 pcm = (mix * 32767).astype(np.int16)
-with wave.open("build/soundtrack.wav", "wb") as w:
+with wave.open(os.path.join(OUT_DIR, "soundtrack.wav"), "wb") as w:
     w.setnchannels(2)
     w.setsampwidth(2)
     w.setframerate(SR)
     w.writeframes(pcm.tobytes())
-print("wrote build/soundtrack.wav", pcm.shape[0] / SR, "s")
+print("wrote", os.path.join(OUT_DIR, "soundtrack.wav"))

@@ -1,10 +1,10 @@
-"""Synthesizes the bouncy soundtrack for the hand-drawn cut (promo-cute.html).
+"""Synthesizes the bouncy soundtrack for the hand-drawn concept (02-hand-drawn/promo.html).
 
-Same 120 BPM grid and section timings as soundtrack.py, but light and playful:
+Same 120 BPM grid and section timings as 01-cinematic/soundtrack.py, but light and playful:
 marimba bass, kalimba plucks, glockenspiel, dholak, claps and cartoon
 boings/pops/whistles on the cuts.
 
-    python3 soundtrack_cute.py  ->  build/soundtrack_cute.wav
+    python3 02-hand-drawn/soundtrack.py  ->  02-hand-drawn/build/soundtrack.wav
 """
 import os
 import wave
@@ -12,6 +12,7 @@ import wave
 import numpy as np
 from scipy.signal import fftconvolve, butter, sosfilt
 
+OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build")
 SR = 44100
 DUR = 30.0
 BEAT = 0.5
@@ -253,10 +254,10 @@ mix[-fade:] *= np.linspace(1, 0, fade)[:, None] ** 1.5
 mix /= np.max(np.abs(mix)) + 1e-9
 mix = np.tanh(1.6 * mix) / np.tanh(1.6) * 0.93
 
-os.makedirs("build", exist_ok=True)
-with wave.open("build/soundtrack_cute.wav", "wb") as w:
+os.makedirs(OUT_DIR, exist_ok=True)
+with wave.open(os.path.join(OUT_DIR, "soundtrack.wav"), "wb") as w:
     w.setnchannels(2)
     w.setsampwidth(2)
     w.setframerate(SR)
     w.writeframes((mix * 32767).astype(np.int16).tobytes())
-print("wrote build/soundtrack_cute.wav")
+print("wrote", os.path.join(OUT_DIR, "soundtrack.wav"))
