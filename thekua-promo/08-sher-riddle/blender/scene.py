@@ -29,16 +29,19 @@ def setup(res=(720, 1280), samples=20, transparent=False):
     return sc
 
 
-def outputs(sc, directory):
-    """Compositor: write each pass as its own float EXR (<pass>_####.exr) for the post-process."""
+FILM_PASSES = ('DiffCol', 'DiffDir', 'DiffInd', 'AO', 'Depth', 'Normal', 'IndexOB')
+
+
+def outputs(sc, directory, passes=('Image', 'DiffCol', 'DiffDir', 'DiffInd', 'AO', 'Depth', 'Normal', 'IndexOB'), half=False):
+    """Compositor: write each pass as its own EXR (<pass>_####.exr) for the post-process (half floats save disk)."""
     sc.use_nodes = True
     nt = sc.node_tree
     for n in list(nt.nodes): nt.nodes.remove(n)
     rl = nt.nodes.new('CompositorNodeRLayers')
     fo = nt.nodes.new('CompositorNodeOutputFile'); fo.base_path = directory
-    fo.format.file_format = 'OPEN_EXR'; fo.format.color_depth = '32'; fo.format.exr_codec = 'ZIP'
+    fo.format.file_format = 'OPEN_EXR'; fo.format.color_depth = '16' if half else '32'; fo.format.exr_codec = 'ZIP'
     fo.file_slots.clear()
-    for name in ('Image', 'DiffCol', 'DiffDir', 'DiffInd', 'AO', 'Depth', 'Normal', 'IndexOB'):
+    for name in passes:
         fo.file_slots.new(name + '_')
         nt.links.new(rl.outputs[name], fo.inputs[name + '_'])
     comp = nt.nodes.new('CompositorNodeComposite'); nt.links.new(rl.outputs['Image'], comp.inputs['Image'])

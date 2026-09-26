@@ -2,3 +2,6 @@ build/
 out/
 __pycache__/
 assets/vo/takes/
+node_modules/
+public/frames/
+render/

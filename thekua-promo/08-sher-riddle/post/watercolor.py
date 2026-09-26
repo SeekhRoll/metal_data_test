@@ -153,7 +153,7 @@ def water(h, w, frame, depth):
 def paint(P, frame=0, out_size=None, background=None, sky=None):
     """P: passes dict from exr.passes. background: 'paper' (turnarounds) or None (the rendered world).
     Returns an RGB float32 image in [0, 1]."""
-    ids = P['IndexOB']; alpha = P['Image'][..., 3] if P['Image'].shape[-1] == 4 else np.ones(ids.shape, np.float32)
+    ids = P['IndexOB']; alpha = P['Image'][..., 3] if 'Image' in P and P['Image'].shape[-1] == 4 else np.ones(ids.shape, np.float32)
     alb = srgb(P['DiffCol'][..., :3])
     L = lum(P['DiffDir'][..., :3]); Li = lum(P['DiffInd'][..., :3]) if 'DiffInd' in P else np.zeros_like(L)
     ao = P['AO'][..., 0] if 'AO' in P else np.ones_like(L)
@@ -215,7 +215,7 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
     bl = boil(noise, h, w, 55)
     bm = np.clip((bl - .74) * 5, 0, 1) * actors
     bring = np.clip(1 - np.abs(bl - .74) * 14, 0, 1) * actors
-    pig = pig * (1 - .22 * bm[..., None]) * (1 + .35 * bring[..., None])
+    # (client: no pale spots on the boat or the characters either; blooms are off everywhere)
 
     # 7. granulation: grainy pigment, strongest in the darks
     g = np.clip(boil(noise, h, w, 1.3) * .5 + boil(noise, h, w, 2.6) * .5, -.2, 1)
@@ -223,7 +223,7 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
 
     # 8. white paper breaking through in the sunlit highlights
     hl = np.clip((L - .95) * 6, 0, 1) * np.clip((lum(base) - .45) * 3, 0, 1) * np.clip(boil(noise, h, w, 30) * 1.6 + .1, 0, 1)
-    pig = pig * (1 - .5 * (hl * actors)[..., None])
+
     if sparkle is not None:
         pig = pig * (1 - .85 * (sparkle * wat)[..., None])        # white paper left unpainted: sparkles
     painted = np.clip(1 - pig, 0, 1)
