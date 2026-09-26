@@ -11,6 +11,7 @@ These are vertical (9:16) promos for homemade thekua, sized for Instagram Reels,
 | [`05-madhubani-sudama/`](05-madhubani-sudama) | "सुदामा की पोटली": Madhubani story series, Episode 1 (60 s) | Remotion + SVG Madhubani painting: bharni double lines, replacement-drawing animation on twos, Gita 9.26 moral, sticker-style end card |
 | [`06-shadow-gilahari/`](06-shadow-gilahari) | "गिलहरी का योगदान": Chhaya Katha shadow-puppet series, Episode 1 (60 s) | Tholu Bommalata leather puppets on a lamp-lit screen: translucent leather, glowing perforations, rivets, rods, pendulum follow-through; male storyteller VO, flute and mridangam score, automated text-collision check |
 | [`07-gond-ekta/`](07-gond-ekta) | "एकता का जाल": Gond Katha series, Episode 1 (60 s) | Inspired by Gond art: flat bright colour, bold outlines, living contour patterns, net with spring physics, patterns that panic and then pulse as one; warm female VO, bansuri and dhol |
+| [`08-sher-riddle/`](08-sher-riddle) | "ई गया हमरा शेर!": lion, goat and cabbage riddle (about 90 s) | Blender 3D clay-toy characters, painted into watercolour in post. Turnarounds awaiting approval |
 
 Every concept folder has the same layout:
 
