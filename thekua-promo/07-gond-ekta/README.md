@@ -5,7 +5,7 @@ It tells the Panchatantra story of Chitragreeva, king of the pigeons, who leads 
 his friend Hiranyaka the mouse, who frees them. The moral is "संघे शक्तिः कलौ युगे": in this age, strength lies in
 togetherness. Built with Remotion (React + SVG).
 
-## Status: style and character sheets awaiting approval (brief §3.4, steps 1–2)
+## Status: complete. `output/ekta-ka-jaal.mp4` (60 s, 1080×1920, 24 fps), `output/ekta-ka-jaal-whatsapp.mp4` (720p) and `output/poster.jpg`
 
 | Still | What it shows |
 |---|---|
@@ -27,3 +27,16 @@ togetherness. Built with Remotion (React + SVG).
 - `src/style/texture.tsx` adds canvas grain and slightly uneven paint density.
 
 Credit line for captions: *inspired by Gond art of Madhya Pradesh*.
+
+## Build
+
+```bash
+python3 scripts/vo.py          # warm female narrator, 3 takes per line (needs HF_TOKEN)
+python3 scripts/pick_vo.py     # keeps the take whose Whisper transcript best matches the script
+python3 scripts/fit_vo.py      # fits the lines into 60 s (anchor per scene, small common tempo)
+python3 scripts/subs.py        # subtitle cards (<= 2 lines) -> src/film/subs.json
+python3 scripts/music.py       # bansuri + folk dhol score
+node scripts/check-text.mjs    # every 6th frame; fails on any text/graphic overlap
+npx remotion render src/index.ts Film out/film-silent.mp4 --crf=16
+python3 scripts/mix.py         # -> output/
+```
