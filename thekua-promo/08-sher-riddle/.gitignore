@@ -4,3 +4,4 @@ __pycache__/
 assets/vo/takes/
 node_modules/
 public/frames/
+render/*.mp4
