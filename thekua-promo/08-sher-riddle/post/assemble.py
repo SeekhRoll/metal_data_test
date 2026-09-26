@@ -27,7 +27,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TL = json.load(open(os.path.join(ROOT, 'src/film/timeline.json')))
 FPS, N = TL['fps'], int(TL['duration'] * TL['fps'])
 OUT, IDS, EXR = (os.path.join(ROOT, p) for p in ('public/frames', 'build/ids', 'build/film'))
-FREEZE = (21.4, 23.95)
+FREEZE = tuple(TL['beats']['freeze'])
 WIPE = (TL['wrong']['wipe'], TL['wrong']['reset'])
 
 
@@ -45,7 +45,8 @@ def smooth(u): u = min(1, max(0, u)); return u * u * (3 - 2 * u)
 def paint_frame(f):
     t = f / FPS
     P = exr.passes(EXR, src_frame(f))
-    golden = smooth((t - 85.0) / 4.0)
+    g0, g1 = TL['beats']['golden']
+    golden = smooth((t - g0) / (g1 - g0))
     h, w = 1920, 1080
     sky = wc.sky_wash(h, w, golden)
     img = wc.paint(P, f, out_size=(w, h), sky=sky)

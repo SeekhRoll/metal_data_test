@@ -78,12 +78,13 @@ def boat_at(t):
 
 
 def boarding_times():
-    ev = [12.9, 13.95, 19.3, TR['push'] + .6, TR['reset']]
+    B = TL.BEATS
+    ev = [B['farmer_board'] + .7, B['goat_in'] + .6, B['goat_out'] + .7, TR['push'] + .6, TR['reset']]
     for k, (cargo, d) in enumerate(TL.CROSSINGS, 1):
         c = TL.crossing_times(k)
         if cargo: ev += [c['board'] + .6 if cargo != 'lion' else c['push'] + .6, c['unload'] + .7]
         ev += [c['arrive']]
-    return ev + [83.9]
+    return ev + [TL.BEATS['farmer_off'] + .1]
 BOARD_EV = boarding_times()
 
 
@@ -116,7 +117,7 @@ def cargo_path(name, t):
     home = 'near'
     events = []                                    # (t_board, t_unload, boat side it leaves from, island it ends on)
     if name == 'goat':
-        events.append((13.6, 18.8, 'near', 'near'))
+        events.append((TL.BEATS['goat_in'], TL.BEATS['goat_out'], 'near', 'near'))
     if name == 'lion':
         events.append((TR['push'], None, 'near', None))
     for k, (cargo, d) in enumerate(TL.CROSSINGS, 1):
@@ -155,13 +156,14 @@ def cargo_path(name, t):
 
 def farmer_path(t):
     near = on_island('farmer', 'near')
-    if t < 12.0: return near, ROT['farmer'], 1.0, 'land'
-    if t < 12.9:
-        hp = hop(t, 12.2, .7, near, seat(12.9, 'stern'), .7); return hp[0], ROT['farmer'], hp[1], 'land'
-    if t < 83.2:
-        return seat(t, 'stern'), None, squash(t, 12.9), 'boat'
+    fb, fo = TL.BEATS['farmer_board'], TL.BEATS['farmer_off']
+    if t < fb - .2: return near, ROT['farmer'], 1.0, 'land'
+    if t < fb + .7:
+        hp = hop(t, fb, .7, near, seat(fb + .7, 'stern'), .7); return hp[0], ROT['farmer'], hp[1], 'land'
+    if t < fo:
+        return seat(t, 'stern'), None, squash(t, fb + .7), 'boat'
     far = (SPOT['far']['farmer'][0], SPOT['far']['farmer'][1], .12)
-    hp = hop(t, 83.3, .7, seat(83.2, 'stern'), far, .7)
+    hp = hop(t, fo + .1, .7, seat(fo, 'stern'), far, .7)
     return (hp[0] if hp else far), 0, (hp[1] if hp else 1.0), 'land'
 
 
@@ -185,16 +187,18 @@ def camera_at(t):
     tg = wide_t
     # scene 2: swing across to the empty far island and back
     # (first a pure sideways truck so the near island leaves by the left edge, then on to the far island)
-    a = ease(seg(t, 6.4, 7.5)) - ease(seg(t, 10.6, 11.6))
-    b = ease(seg(t, 7.4, 9.0)) - ease(seg(t, 9.6, 10.7))
+    s0, s1 = TL.BEATS['swing']
+    a = ease(seg(t, s0, s0 + 1.1)) - ease(seg(t, s1 - 1.0, s1))
+    b = ease(seg(t, s0 + 1.0, s0 + 2.6)) - ease(seg(t, s1 - 2.0, s1 - .9))
     p = (p[0] + 4.6 * a, p[1], p[2]); tg = (tg[0] + 4.6 * a, tg[1], tg[2])
     p = lerp(p, (8.4, -1.2, 7.6), b); tg = lerp(tg, (FAR[0] + .9, FAR[1] + .2, .3), b)
     # scene 3: push in on Ramkhelawan scratching his head
-    c = ease(seg(t, 20.1, 20.8)) - ease(seg(t, 23.7, 24.2))
-    fx, fy, _ = seat(22.0, 'stern')
+    c0, c1 = TL.BEATS['scratch']
+    c = ease(seg(t, c0 - .2, c0 + .5)) - ease(seg(t, c1 + .2, c1 + .7))
+    fx, fy, _ = seat(c0, 'stern')
     p = lerp(p, (wide_p[0] - .1, wide_p[1] + .5, wide_p[2] - .4), c); tg = lerp(tg, (wide_t[0] - .15, wide_t[1] - .3, 0), c)
     # scene 6: pull up into a wide view of the river at golden hour
-    u = ease(seg(t, 85.2, 90))
+    u = ease(seg(t, *TL.BEATS['pullup']))
     p = lerp(p, (1.3, -7.5, 15.5), u); tg = lerp(tg, (1.0, 5.2, 0), u)
     return p, tg, lens - 3 * u
 
@@ -221,27 +225,28 @@ def pose(t, cast, rigs, oar, cam):
     f = cast['farmer']; fr = rigs['farmer']
     p, yaw, zs, where = farmer_path(t)
     if yaw is None:
-        yaw = hd + 90 if moving or t > 34 else 5
+        yaw = hd + 90 if moving or t > TL.T0 else 5
         if TR['turn'] <= t < TR['reset']: yaw = hd + 90 + 170 * ease(seg(t, TR['turn'], TR['turn'] + .35))
     f.location = p; f.rotation_euler = (0, R(3 * math.sin(t * 4.2)) if moving else 0, R(yaw))
     f.scale = (1 / math.sqrt(zs), 1 / math.sqrt(zs), zs)
     armR = armL = 0.0; head_tilt = head_yaw = 0.0
     if t < 2.4:                                               # "राम-राम भइया!" a big wave
         armR = -150 * ease(seg(t, .5, .9)) * (1 - ease(seg(t, 2.0, 2.4))) + 18 * math.sin(t * 12) * seg(t, .9, 1.0) * (1 - seg(t, 1.9, 2.0))
-    if 20.3 <= t < 23.8:                                      # scratching his head
-        armR = -150 * ease(seg(t, 20.3, 20.8)) * (1 - ease(seg(t, 23.4, 23.8))) + 8 * math.sin(t * 18)
-        head_tilt = 12 * ease(seg(t, 20.4, 20.9)) * (1 - ease(seg(t, 23.4, 23.8)))
+    s0, s1 = TL.BEATS['scratch']
+    if s0 <= t < s1:                                          # scratching his head
+        armR = -150 * ease(seg(t, s0, s0 + .5)) * (1 - ease(seg(t, s1 - .4, s1))) + 8 * math.sin(t * 18)
+        head_tilt = 12 * ease(seg(t, s0 + .1, s0 + .6)) * (1 - ease(seg(t, s1 - .4, s1)))
     if TR['turn'] <= t < TR['reset']:                         # horrified
         armR = armL = -160 * ease(seg(t, TR['turn'] + .1, TR['turn'] + .4))
         head_tilt = -10
-    if moving and t > 34:                                     # rowing
+    if moving and t > TL.T0:                                  # rowing
         armR = -40 + 25 * math.sin(t * 4.2); armL = -30 + 25 * math.sin(t * 4.2)
     fr['armR'].rotation_euler = (R(armR), 0, 0); fr['armL'].rotation_euler = (R(armL), 0, 0)
     fr['head'].rotation_euler = (0, R(head_tilt), R(head_yaw + 3 * math.sin(t * 1.3)))
 
     # lion: lazy idle, tail swish; a big yawn in scene 1 and the finale; sniff and disgust at the cabbage
     lr = rigs['lion']
-    yawn = max(math.sin(math.pi * seg(t, 3.0, 4.4)), math.sin(math.pi * seg(t, 85.0, 86.6)))
+    yawn = max(math.sin(math.pi * seg(t, *TL.BEATS['lion_yawn'])), math.sin(math.pi * seg(t, *TL.BEATS['yawn2'])))
     c5 = TL.crossing_times(5)
     sniff = math.sin(math.pi * seg(t, c5['unload'] + .9, c5['unload'] + 1.7))
     disgust = ease(seg(t, c5['unload'] + 1.7, c5['unload'] + 2.1)) * (1 - ease(seg(t, c5['unload'] + 3.4, c5['unload'] + 3.9)))
@@ -253,13 +258,14 @@ def pose(t, cast, rigs, oar, cam):
     munch = (math.sin(t * 9) * .5 + .5) if TR['munch'] <= t < TR['reset'] else 0
     c4 = TL.crossing_times(4)
     confused = math.sin(math.pi * seg(t, c4['push'], c4['push'] + 2.4))
-    nuzzle = seg(t, 84.4, 84.8) * (1 - seg(t, 87.5, 87.9))
+    n0, n1 = TL.BEATS['nuzzle']
+    nuzzle = seg(t, n0, n0 + .4) * (1 - seg(t, n1 - .4, n1))
     gr['head'].rotation_euler = (R(35 * munch + 10 * nuzzle * math.sin(t * 7)), R(-25 * confused), R(8 * math.sin(t * 1.9) + 20 * confused))
     gr['tail'].rotation_euler = (R(30 * math.sin(t * 7)), 0, 0)
     if nuzzle > 0:                                           # the goat trots up to Ramkhelawan and rubs against him
         fp = cast['farmer'].location
         g = cast['goat']; tgt = (fp[0] + .55, fp[1] - .3, .12)
-        g.location = lerp(tuple(g.location), tgt, ease(seg(t, 84.0, 84.8))); g.rotation_euler[2] = R(160)
+        g.location = lerp(tuple(g.location), tgt, ease(seg(t, n0 - .4, n0 + .4))); g.rotation_euler[2] = R(160)
 
     p, tg, lens = camera_at(t)
     cam.location = p

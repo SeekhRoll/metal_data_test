@@ -20,7 +20,8 @@ function panelState(t: number) {
   return { k, st: (TL.states as { k: number; near: string[]; far: string[] }[])[done] };
 }
 const Panel: React.FC<{ t: number }> = ({ t }) => {
-  const show = interpolate(t, [33.6, 34.2], [0, 1], clamp);
+  const p0 = (TL as { beats: { panel_in: number } }).beats.panel_in;
+  const show = interpolate(t, [p0, p0 + .6], [0, 1], clamp);
   if (show <= 0) return null;
   const { k, st } = panelState(t);
   const slot = (who: string) => ({ lion: 0, goat: 1, cabbage: 2 } as Record<string, number>)[who];
@@ -53,7 +54,8 @@ const Bubble: React.FC<{ t: number; who: 'lion' | 'goat'; t0: number; t1: number
 
 // ---------------------------------------------------------------- "सोचिए…"
 const Think: React.FC<{ t: number }> = ({ t }) => {
-  const a = interpolate(t, [21.5, 22.0, 23.7, 24.0], [0, 1, 1, 0], clamp);
+  const [f0, f1] = (TL as { beats: { freeze: number[] } }).beats.freeze;
+  const a = interpolate(t, [f0 + .1, f0 + .6, f1 - .3, f1], [0, 1, 1, 0], clamp);
   if (a <= 0) return null;
   const z = THINK_ZONE;
   return <div data-kind="text" style={{ position: 'absolute', left: z.x, top: z.y, width: z.w, height: z.h, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT.yatra, fontSize: 118, color: '#B0301E', opacity: a, transform: `rotate(-3deg) scale(${.9 + .1 * a})` }}>सोचिए…</div>;

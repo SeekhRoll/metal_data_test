@@ -4,6 +4,6 @@ import { Film } from './film/Film';
 
 export const Root: React.FC = () => (
   <>
-    <Composition id="Film" component={Film} width={1080} height={1920} fps={24} durationInFrames={24 * 90} />
+    <Composition id="Film" component={Film} width={1080} height={1920} fps={24} durationInFrames={Math.round(24 * 91.5)} />
   </>
 );

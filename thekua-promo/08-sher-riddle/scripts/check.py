@@ -32,11 +32,11 @@ print(f'catchphrase: {len(cues)} cues for {len(starts)} lion moves')
 # 2 --------------------------------------------------------------- status panel vs the solution table (brief §1)
 TABLE = [({'lion', 'cabbage'}, {'goat'}), ({'lion', 'cabbage'}, {'goat'}), ({'cabbage'}, {'goat', 'lion'}), ({'cabbage', 'goat'}, {'lion'}),
          ({'goat'}, {'lion', 'cabbage'}), ({'goat'}, {'lion', 'cabbage'}), (set(), {'lion', 'cabbage', 'goat'})]
-for (near, far), st in zip(TABLE, TL['states'][1:]):
+for (near, far), st, cr in zip(TABLE, TL['states'][1:], TL['crossings']):
     if set(st['near']) != near or set(st['far']) != far:
         fails.append(f"status after crossing {st['k']}: {st} does not match the table")
-    # nobody is ever left alone to be eaten
-    for side in (set(st['near']), set(st['far'])):
+    # nobody is left alone to be eaten on the island the farmer has just left
+    for side in [set(st['near']) if cr['dir'] > 0 else set(st['far'])]:
         if {'lion', 'goat'} <= side or {'goat', 'cabbage'} <= side:
             fails.append(f"crossing {st['k']}: something gets eaten on an island left without the farmer ({side})")
 print('status panel: checked 7 crossings')
@@ -55,7 +55,8 @@ for f in range(0, int(TL['duration'] * TL['fps']), 6):
         continue
     ids = cv2.imread(p, cv2.IMREAD_UNCHANGED).astype(np.int32)
     ill = ids >= 10
-    zones = ['band'] + (['panel'] if t >= 33.6 else []) + (['think'] if 21.5 <= t < 24.0 else [])
+    fz = TL['beats']['freeze']
+    zones = ['band'] + (['panel'] if t >= TL['beats']['panel_in'] else []) + (['think'] if fz[0] <= t < fz[1] else [])
     scene = next(s['id'] for s in TL['scenes'] if s['from'] <= t < s['to'] + 1e-9) if t < TL['duration'] else 'S6'
     for z in zones:
         x, y, w, h = L[z]
