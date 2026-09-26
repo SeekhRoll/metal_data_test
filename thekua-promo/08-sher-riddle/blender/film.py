@@ -128,6 +128,7 @@ def cargo_path(name, t):
     pos, yaw, zs = on_island(name, 'near'), ROT[name], 1.0
     if name == 'lion' and TR['push'] - .3 <= t < TR['reset']:
         hp = hop(t, TR['push'], .55, on_island('lion', 'near'), seat(TR['push'] + .55, 'bow'), 1.0)
+        if hp is None and t < TR['push']: return on_island('lion', 'near'), ROT['lion'], 1.0
         if hp and t <= TR['push'] + .55: return hp[0], ROT['lion'] + 60 * seg(t, TR['push'], TR['push'] + .55), hp[1]
         return seat(t, 'bow'), boat_at(t)[2] + 90, (hp[1] if hp else 1.0)
     if name == 'goat' and TR['goat_walk'] - .3 <= t < TR['reset']:
@@ -135,6 +136,7 @@ def cargo_path(name, t):
         p0, p1 = on_island('goat', 'near'), on_island('cabbage', 'near')
         tgt = (p1[0] + .55, p1[1] - .05, .12)
         hp = hop(t, TR['goat_walk'], .5, p0, tgt, .35)
+        if hp is None and t < TR['goat_walk']: return p0, ROT['goat'], 1.0
         return (hp[0] if hp and t < TR['goat_walk'] + .5 else tgt), 80, (hp[1] if hp else 1.0)
     for tb, tu, frm, to in events:
         if tb is None: continue
@@ -144,6 +146,7 @@ def cargo_path(name, t):
         src = on_island(name, frm)
         if t <= land_in:
             hp = hop(t, tb, .6, src, seat(land_in, 'bow'), .8 if name != 'cabbage' else .6)
+            if hp is None: return src, ROT[name], 1.0
             return hp[0], ROT[name] + 40 * seg(t, tb, land_in), hp[1]
         if t < tu:
             return seat(t, 'bow'), boat_at(t)[2] + (90 if name != 'cabbage' else 0), squash(t, land_in)
