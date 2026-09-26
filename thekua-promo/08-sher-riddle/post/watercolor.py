@@ -5,7 +5,8 @@
   in the highlights -> loose ink line (from object-ID, depth and normal edges), offset and wobbling off the fills
   -> cold-press paper multiplied over everything (fixed to the frame; it never swims with the camera).
 
-Noise is re-seeded every 2 frames with a cross-fade between seeds: a subtle boil, never a harsh flicker.
+Noise is re-seeded every 6 frames (a quarter second) and cross-faded across the whole hold: a slow, gentle
+boil, never a flicker (client: hold each drawing longer).
 """
 import os
 
@@ -143,7 +144,7 @@ def water(h, w, frame, depth):
     col = col * (1 - .25 * far[..., None]) + ultra[None, None] * .25 * far[..., None]
     streak = aniso(h, w, 220, 16, 41, ox=t * 30)
     col = col * (1 - .07 * np.clip(streak, 0, 1)[..., None])
-    sp = aniso(h, w, 120, 9, 57 + (frame // 2) % 6, ox=t * 45)
+    sp = aniso(h, w, 120, 9, 57 + (frame // 12) % 6, ox=t * 30)
     zone = np.clip(fbm(h, w, 380, 91) * 1.5 + .2, 0, 1)             # sparkles gather in a few sunlit patches
     sparkle = np.clip((sp - .8) * 8, 0, 1) * zone * (1 - far * .5)
     return np.clip(col, 0, 1), sparkle
@@ -163,7 +164,9 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
         alb, L, Li, ao, alpha, depth = up(alb), up(L), up(Li), up(ao), up(alpha), up(depth)
         ids = up(ids, cv2.INTER_NEAREST); normal = up(normal) if normal is not None else None
     h, w = L.shape
-    seed, fade = frame // 2, (frame % 2) / 2.0
+    HOLD = 6
+    seed, fade = frame // HOLD, (frame % HOLD) / HOLD
+    fade = fade * fade * (3 - 2 * fade)
     def boil(fn, *a):                       # cross-faded between the two seeds around this frame
         return fn(*a, seed) * (1 - fade) + fn(*a, seed + 1) * fade
 
@@ -173,6 +176,7 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
     base = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     obj = (ids > .5).astype(np.float32)
     wat = (np.abs(ids - 1) < .5).astype(np.float32)
+    actors = ((ids >= 9.5) & (ids < 89.5)).astype(np.float32)          # farmer, lion, goat, cabbage, boat
     sparkle = None
     if wat.any():
         wc_, sparkle = water(h, w, frame, depth)
@@ -209,9 +213,9 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
 
     # 6. blooms (backruns): pale centres with a dark cauliflower rim here and there inside the washes
     bl = boil(noise, h, w, 55)
-    bm = np.clip((bl - .62) * 5, 0, 1) * obj * (1 - wat)
-    bring = np.clip(1 - np.abs(bl - .62) * 14, 0, 1) * obj * (1 - wat)
-    pig = pig * (1 - .45 * bm[..., None]) * (1 + .5 * bring[..., None])
+    bm = np.clip((bl - .74) * 5, 0, 1) * actors
+    bring = np.clip(1 - np.abs(bl - .74) * 14, 0, 1) * actors
+    pig = pig * (1 - .22 * bm[..., None]) * (1 + .35 * bring[..., None])
 
     # 7. granulation: grainy pigment, strongest in the darks
     g = np.clip(boil(noise, h, w, 1.3) * .5 + boil(noise, h, w, 2.6) * .5, -.2, 1)
@@ -219,7 +223,7 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
 
     # 8. white paper breaking through in the sunlit highlights
     hl = np.clip((L - .95) * 6, 0, 1) * np.clip((lum(base) - .45) * 3, 0, 1) * np.clip(boil(noise, h, w, 30) * 1.6 + .1, 0, 1)
-    pig = pig * (1 - .7 * hl[..., None])
+    pig = pig * (1 - .5 * (hl * actors)[..., None])
     if sparkle is not None:
         pig = pig * (1 - .85 * (sparkle * wat)[..., None])        # white paper left unpainted: sparkles
     painted = np.clip(1 - pig, 0, 1)
