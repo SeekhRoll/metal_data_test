@@ -1,0 +1,220 @@
+{
+ "fps": 24,
+ "duration": 90.0,
+ "scenes": [
+  {
+   "id": "S1",
+   "from": 0,
+   "to": 6
+  },
+  {
+   "id": "S2",
+   "from": 6,
+   "to": 20
+  },
+  {
+   "id": "S3",
+   "from": 20,
+   "to": 24
+  },
+  {
+   "id": "S4",
+   "from": 24,
+   "to": 34
+  },
+  {
+   "id": "S5",
+   "from": 34,
+   "to": 83
+  },
+  {
+   "id": "S6",
+   "from": 83,
+   "to": 90
+  }
+ ],
+ "crossings": [
+  {
+   "k": 1,
+   "cargo": "goat",
+   "dir": 1,
+   "start": 34.0,
+   "board": 34.2,
+   "push": 35.4,
+   "arrive": 38.9,
+   "unload": 39.1,
+   "end": 41.0
+  },
+  {
+   "k": 2,
+   "cargo": null,
+   "dir": -1,
+   "start": 41.0,
+   "board": 41.2,
+   "push": 42.4,
+   "arrive": 45.9,
+   "unload": 46.1,
+   "end": 48.0
+  },
+  {
+   "k": 3,
+   "cargo": "lion",
+   "dir": 1,
+   "start": 48.0,
+   "board": 48.2,
+   "push": 49.4,
+   "arrive": 52.9,
+   "unload": 53.1,
+   "end": 55.0
+  },
+  {
+   "k": 4,
+   "cargo": "goat",
+   "dir": -1,
+   "start": 55.0,
+   "board": 55.2,
+   "push": 56.4,
+   "arrive": 59.9,
+   "unload": 60.1,
+   "end": 62.0
+  },
+  {
+   "k": 5,
+   "cargo": "cabbage",
+   "dir": 1,
+   "start": 62.0,
+   "board": 62.2,
+   "push": 63.4,
+   "arrive": 66.9,
+   "unload": 67.1,
+   "end": 69.0
+  },
+  {
+   "k": 6,
+   "cargo": null,
+   "dir": -1,
+   "start": 69.0,
+   "board": 69.2,
+   "push": 70.4,
+   "arrive": 73.9,
+   "unload": 74.1,
+   "end": 76.0
+  },
+  {
+   "k": 7,
+   "cargo": "goat",
+   "dir": 1,
+   "start": 76.0,
+   "board": 76.2,
+   "push": 77.4,
+   "arrive": 80.9,
+   "unload": 81.1,
+   "end": 83.0
+  }
+ ],
+ "states": [
+  {
+   "k": 0,
+   "near": [
+    "cabbage",
+    "goat",
+    "lion"
+   ],
+   "far": []
+  },
+  {
+   "k": 1,
+   "near": [
+    "cabbage",
+    "lion"
+   ],
+   "far": [
+    "goat"
+   ]
+  },
+  {
+   "k": 2,
+   "near": [
+    "cabbage",
+    "lion"
+   ],
+   "far": [
+    "goat"
+   ]
+  },
+  {
+   "k": 3,
+   "near": [
+    "cabbage"
+   ],
+   "far": [
+    "goat",
+    "lion"
+   ]
+  },
+  {
+   "k": 4,
+   "near": [
+    "cabbage",
+    "goat"
+   ],
+   "far": [
+    "lion"
+   ]
+  },
+  {
+   "k": 5,
+   "near": [
+    "goat"
+   ],
+   "far": [
+    "cabbage",
+    "lion"
+   ]
+  },
+  {
+   "k": 6,
+   "near": [
+    "goat"
+   ],
+   "far": [
+    "cabbage",
+    "lion"
+   ]
+  },
+  {
+   "k": 7,
+   "near": [],
+   "far": [
+    "cabbage",
+    "goat",
+    "lion"
+   ]
+  }
+ ],
+ "lionMoving": [
+  {
+   "from": 26.0,
+   "to": 29.2,
+   "what": "wrong attempt"
+  },
+  {
+   "from": 49.4,
+   "to": 54.1,
+   "what": "crossing 3"
+  }
+ ],
+ "catchphrase": [
+  26.0,
+  49.4
+ ],
+ "wrong": {
+  "push": 26.0,
+  "stop": 29.2,
+  "goat_walk": 26.8,
+  "munch": 27.6,
+  "turn": 29.2,
+  "wipe": 31.6,
+  "reset": 32.4
+ }
+}

@@ -7,7 +7,7 @@ import characters as ch
 
 
 def river(size=60):
-    bpy.ops.mesh.primitive_plane_add(size=size, location=(0, 0, 0))
+    bpy.ops.mesh.primitive_plane_add(size=size, location=(0, 0, -.06))
     r = bpy.context.active_object; r.name = 'river'
     r.data.materials.append(mat('water', '#27A9B4', rough=.6))
     r.pass_index = ch.ID['river']

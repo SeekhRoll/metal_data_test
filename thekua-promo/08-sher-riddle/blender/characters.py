@@ -69,6 +69,8 @@ def lion(loc=(0, 0, 0), name='lion'):
         eye(f'{name}_eye{sx}', (hx + sx * .1, -.33, hz + .06), .055, i + 4, r, look=(0, -1, -.1), lid=.42, lid_col='#E3A53C')
     sphere(f'{name}_nose', (hx, -.41, hz - .02), (.07, .05, .05), mat('lnose', '#5A2A1C'), i + 4, r)
     sphere(f'{name}_chin', (hx, -.3, hz - .19), (.08, .06, .05), muz, i + 3, r)
+    tg = sphere(f'{name}_tongue', (hx, -.42, hz - .18), (.06, .05, .09), mat('tongue', '#E0607A'), i + 4, r)
+    tg.hide_render = True
     tube(f'{name}_smirk', [(hx - .06, -.42, hz - .14), (hx + .02, -.43, hz - .15), (hx + .09, -.41, hz - .11)], .012, mat('mouth', '#7A2320'), i + 4, r)
     return r
 
@@ -131,9 +133,15 @@ def boat(loc=(0, 0, 0), name='boat'):
     _finish(h, wood, i, r)
     rim = [(math.cos(a) * 1.35, math.sin(a) * .5, .35) for a in [k / 24 * math.tau for k in range(25)]]
     tube(f'{name}_rim', rim, .035, mat('rim', '#5A3417'), i + 1, r)
-    cyl(f'{name}_seat', (0, 0, .22), .06, .95, mat('rim', '#5A3417'), i + 1, r, rot=(math.pi / 2, 0, 0))
-    tube(f'{name}_oar', [(.3, .1, .4), (.9, .75, .1), (1.2, 1.05, -.1)], .025, mat('oar', '#C08A4A'), i + 2, r)
-    sphere(f'{name}_blade', (1.25, 1.1, -.12), (.22, .06, .1), mat('oar', '#C08A4A'), i + 2, r, rot=(0, 0, math.radians(45)))
+    # a floor of planks so the water never shows inside the hull
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, .09))
+    fl = bpy.context.active_object; fl.name = f'{name}_floor'; fl.scale = (2.0, .6, .04)
+    _finish(fl, mat('plank', '#C9914F'), i + 1, r, smooth=False)
+    cyl(f'{name}_seat', (.45, 0, .24), .06, .9, mat('rim', '#5A3417'), i + 1, r, rot=(math.pi / 2, 0, 0))
+    # the oar hangs from a pivot at the stern so it can be animated
+    piv = empty(f'{name}_oarpivot', (-1.0, .32, .42), r)
+    tube(f'{name}_oar', [(0, 0, .5), (0, .25, 0), (0, .5, -.55)], .028, mat('oar', '#C08A4A'), i + 2, piv)
+    sphere(f'{name}_blade', (0, .52, -.62), (.06, .09, .2), mat('oar', '#C08A4A'), i + 2, piv)
     return r
 
 
@@ -151,15 +159,48 @@ def palm(loc, h=2.2, lean=.3, name='palm', pid=100, parent=None):
     return r
 
 
-def island(loc=(0, 0, 0), name='island', pid=90, flip=False):
+def island(loc=(0, 0, 0), name='island', pid=90, flip=False, palms=None):
     r = empty(name, loc)
     sphere(f'{name}_sand', (0, 0, -.12), (2.0, 1.45, .32), mat('sand', '#EBCB8B'), pid, r, seg=48)
     sphere(f'{name}_grass', (0, .08, .02), (1.75, 1.25, .2), mat('grass', '#5FAF3A'), pid + 1, r, seg=48)
-    palm((1.1 if not flip else -1.1, .7, .1), 2.3, .35 if not flip else -.35, f'{name}_palm', pid + 3, r)
-    palm((-1.3 if not flip else 1.3, .9, .1), 1.7, -.25 if not flip else .25, f'{name}_palm2', pid + 3, r)
+    palms = palms or [((1.1 if not flip else -1.1, .7), 2.3, .35 if not flip else -.35), ((-1.3 if not flip else 1.3, .9), 1.7, -.25 if not flip else .25)]
+    for k, ((px, py), ph, lean) in enumerate(palms):
+        palm((px, py, .1), ph, lean, f'{name}_palm{k}', pid + 3, r)
     for k in range(10):
         a = k * 2.4
         x, y = math.cos(a) * (1.0 + (k % 3) * .2), math.sin(a) * .8
         for j in range(3):
             cone(f'{name}_tuft{k}_{j}', (x + (j - 1) * .04, y, .2), .035, .0, .22, mat('tuft', '#3F8F2A' if j % 2 else '#7CC24E'), pid + 2, r, rot=(0, (j - 1) * .35, 0))
     return r
+
+
+# ---------------------------------------------------------------- joints for animation
+def pivot(root, name, P, match):
+    """Create an empty at P (character space) and re-parent every part whose name contains one of `match` to it,
+    keeping the part where it is. Rotating / scaling the empty then moves the head, an arm, the tail..."""
+    from mathutils import Matrix
+    from toolkit import empty
+    pv = empty(f'{root.name}_{name}', P, root)
+    inv = Matrix.Translation((-P[0], -P[1], -P[2]))
+    for ob in list(root.children):
+        if ob is pv: continue
+        if any(m in ob.name for m in match):
+            ob.parent = pv
+            ob.matrix_parent_inverse = inv
+    return pv
+
+
+def rig(root, kind):
+    """add the joints each character needs; returns a dict of pivots"""
+    n = root.name
+    if kind == 'farmer':
+        return {'head': pivot(root, 'headp', (0, 0, 1.36), ['_head', '_hair', '_ear', '_nose', '_eye', '_brow', '_mush', '_smile', '_tilak']),
+                'armR': pivot(root, 'armRp', (.3, 0, 1.24), ['_arm1', '_hand1']),
+                'armL': pivot(root, 'armLp', (-.3, 0, 1.24), ['_arm-1', '_hand-1'])}
+    if kind == 'lion':
+        return {'head': pivot(root, 'headp', (.45, 0, .78), ['_mane', '_head', '_ear', '_muz', '_eye', '_nose', '_chin', '_tongue', '_smirk']),
+                'tail': pivot(root, 'tailp', (-.55, .08, .6), ['_tail', '_tuft'])}
+    if kind == 'goat':
+        return {'head': pivot(root, 'headp', (.28, -.02, .6), ['_neck', '_head', '_snout', '_beard', '_ear', '_horn', '_eye', '_nose', '_grin']),
+                'tail': pivot(root, 'tailp', (-.34, .03, .56), ['_tail'])}
+    return {}
