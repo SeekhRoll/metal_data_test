@@ -58,7 +58,7 @@ const Think: React.FC<{ t: number }> = ({ t }) => {
   const a = interpolate(t, [f0 + .1, f0 + .6, f1 - .3, f1], [0, 1, 1, 0], clamp);
   if (a <= 0) return null;
   const z = THINK_ZONE;
-  return <div data-kind="text" style={{ position: 'absolute', left: z.x, top: z.y, width: z.w, height: z.h, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT.yatra, fontSize: 118, color: '#B0301E', opacity: a, transform: `rotate(-3deg) scale(${.9 + .1 * a})` }}>सोचिए…</div>;
+  return <div data-kind="text" style={{ position: 'absolute', left: z.x, top: z.y, width: z.w, height: z.h, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT.yatra, fontSize: 104, color: '#B0301E', opacity: a, transform: `rotate(-3deg) scale(${.9 + .1 * a})` }}>सोचिए…</div>;
 };
 
 // ---------------------------------------------------------------- subtitles on the painted band

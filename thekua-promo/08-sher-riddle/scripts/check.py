@@ -44,7 +44,7 @@ print('status panel: checked 7 crossings')
 # 3 --------------------------------------------------------------- text collision
 sys.path.insert(0, os.path.join(ROOT, 'src'))
 L = {  # mirrors src/film/layout.ts
-    'panel': (0, 0, 1080, 330), 'band': (0, 1620, 1080, 300), 'think': (520, 900, 520, 250),
+    'panel': (0, 0, 1080, 330), 'band': (0, 1620, 1080, 300), 'think': (630, 900, 420, 250),
 }
 PAD, S = 24, 4
 checked = 0
