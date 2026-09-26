@@ -109,6 +109,46 @@ def edges(ids, depth, normal):
 
 
 # ---------------------------------------------------------------- the painting
+def aniso(h, w, sx, sy, seed, ox=0.0):
+    """anisotropic noise: long in x, short in y (water streaks), drifting by ox px"""
+    rs = np.random.RandomState(seed)
+    gh, gw = max(2, int(h / sy) + 3), max(2, int(w / sx) + 3)
+    g = rs.uniform(-1, 1, (gh, gw)).astype(np.float32)
+    big = cv2.resize(g, (int(gw * sx), int(gh * sy)), interpolation=cv2.INTER_CUBIC)
+    o = int(ox) % max(1, int(sx))
+    return big[:h, o:o + w] if big.shape[1] >= o + w else cv2.resize(big, (w + o, h))[:, o:o + w]
+
+
+def sky_wash(h, w, golden=0.0):
+    """a loose sky: cerulean wash fading to paper, soft cloud shapes left white; `golden` warms it for the finale"""
+    y = np.linspace(0, 1, h, dtype=np.float32)[:, None] * np.ones((1, w), np.float32)
+    top, low = np.array([.42, .66, .9], np.float32), np.array([.93, .9, .82], np.float32)
+    gold = np.array([.98, .74, .42], np.float32)
+    k = np.clip(y * 1.3 + fbm(h, w, 260, 71) * .15, 0, 1)[..., None]
+    col = top[None, None] * (1 - k) + low[None, None] * k
+    col = col * (1 - golden * .6) + gold[None, None] * golden * .6 * (.4 + .6 * k)
+    cloud = np.clip((fbm(h, w, 180, 83) - .15) * 3, 0, 1) * (1 - y)
+    return np.clip(col * (1 - cloud[..., None]) + cloud[..., None], 0, 1)
+
+
+def water(h, w, frame, depth):
+    """wet-on-wet river: soft blooming turquoise-ultramarine washes, darker with distance, painted white sparkles"""
+    t = frame / 24
+    turq, ultra, sap = np.array([.16, .70, .74], np.float32), np.array([.20, .38, .80], np.float32), np.array([.30, .66, .48], np.float32)
+    a = np.clip(fbm(h, w, 420, 21) * .8 + .5, 0, 1)
+    b = np.clip(fbm(h, w, 200, 33) * .8 + .5, 0, 1)
+    col = turq[None, None] * (1 - a[..., None] * .75) + ultra[None, None] * (a[..., None] * .75)
+    col = col * (1 - .18 * b[..., None]) + sap[None, None] * .18 * b[..., None]
+    far = np.clip((np.log(np.clip(depth, .1, 1e3)) - 1.6) / 1.6, 0, 1)
+    col = col * (1 - .25 * far[..., None]) + ultra[None, None] * .25 * far[..., None]
+    streak = aniso(h, w, 220, 16, 41, ox=t * 30)
+    col = col * (1 - .07 * np.clip(streak, 0, 1)[..., None])
+    sp = aniso(h, w, 120, 9, 57 + (frame // 2) % 6, ox=t * 45)
+    zone = np.clip(fbm(h, w, 380, 91) * 1.5 + .2, 0, 1)             # sparkles gather in a few sunlit patches
+    sparkle = np.clip((sp - .8) * 8, 0, 1) * zone * (1 - far * .5)
+    return np.clip(col, 0, 1), sparkle
+
+
 def paint(P, frame=0, out_size=None, background=None, sky=None):
     """P: passes dict from exr.passes. background: 'paper' (turnarounds) or None (the rendered world).
     Returns an RGB float32 image in [0, 1]."""
@@ -132,6 +172,12 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
     hsv[..., 1] = np.clip(hsv[..., 1] * 1.3, 0, 1); hsv[..., 2] = np.clip(hsv[..., 2] * 1.06 + .03, 0, 1)
     base = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     obj = (ids > .5).astype(np.float32)
+    wat = (np.abs(ids - 1) < .5).astype(np.float32)
+    sparkle = None
+    if wat.any():
+        wc_, sparkle = water(h, w, frame, depth)
+        lit = (.78 + .3 * np.clip(L, 0, 1))[..., None]               # object shadows fall on the water
+        base = base * (1 - wat[..., None]) + np.clip(wc_ * lit, 0, 1) * wat[..., None]
     base = kuwahara(base, 4 if w > 800 else 3)
 
     # 2. wet-edge bleed: colour runs a few px past the forms
@@ -151,7 +197,7 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
 
     # 5. shadow glazes: 2 hard-edged, wobbling layers of cool, deeper colour (toon steps painted as glazes)
     for thr, strength, sc in ((.62, .5, 70), (.2, .45, 40)):
-        m = (L < thr).astype(np.float32) * obj
+        m = (L < thr).astype(np.float32) * obj * (1 - wat * .5)
         m = displace(cv2.GaussianBlur(m, (0, 0), 1.5), boil(noise, h, w, sc) * 5, boil(noise, h, w, sc) * 5)
         m = np.clip((m - .5) * 6 + .5, 0, 1)
         md = cv2.distanceTransform((np.abs(np.diff(np.pad(m > .5, ((0, 1), (0, 0)), mode='edge').astype(np.int8), axis=0)) + np.abs(np.diff(np.pad(m > .5, ((0, 0), (0, 1)), mode='edge').astype(np.int8), axis=1)) == 0).astype(np.uint8), cv2.DIST_L2, 3)
@@ -163,8 +209,8 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
 
     # 6. blooms (backruns): pale centres with a dark cauliflower rim here and there inside the washes
     bl = boil(noise, h, w, 55)
-    bm = np.clip((bl - .62) * 5, 0, 1) * obj
-    bring = np.clip(1 - np.abs(bl - .62) * 14, 0, 1) * obj
+    bm = np.clip((bl - .62) * 5, 0, 1) * obj * (1 - wat)
+    bring = np.clip(1 - np.abs(bl - .62) * 14, 0, 1) * obj * (1 - wat)
     pig = pig * (1 - .45 * bm[..., None]) * (1 + .5 * bring[..., None])
 
     # 7. granulation: grainy pigment, strongest in the darks
@@ -174,6 +220,8 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
     # 8. white paper breaking through in the sunlit highlights
     hl = np.clip((L - .95) * 6, 0, 1) * np.clip((lum(base) - .45) * 3, 0, 1) * np.clip(boil(noise, h, w, 30) * 1.6 + .1, 0, 1)
     pig = pig * (1 - .7 * hl[..., None])
+    if sparkle is not None:
+        pig = pig * (1 - .85 * (sparkle * wat)[..., None])        # white paper left unpainted: sparkles
     painted = np.clip(1 - pig, 0, 1)
 
     # background
@@ -186,9 +234,9 @@ def paint(P, frame=0, out_size=None, background=None, sky=None):
         bg = 1 - (1 - np.array([.62, .64, .86], np.float32))[None, None] * sh[..., None] * .8
         a = np.clip(obj_b, 0, 1)[..., None]
         painted = painted * a + bg * (1 - a)
-    elif sky is not None:
+    else:
         a = np.clip(obj_b, 0, 1)[..., None]
-        painted = painted * a + sky * (1 - a)
+        painted = painted * a + (sky if sky is not None else sky_wash(h, w)) * (1 - a)
 
     # 7. ink line: loose, wobbling, 1-2 px off the fills
     e = edges(ids, depth, normal) * np.clip(alpha + obj, 0, 1)
