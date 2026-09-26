@@ -5,9 +5,9 @@ export const FPS = 24, DURATION = 60;
 export const SCENES = [
   { id: 'S1', name: 'बरगद', from: 0, to: 5 },
   { id: 'S2', name: 'झुंड', from: 5, to: 13 },
-  { id: 'S3', name: 'जाल', from: 13, to: 20 },
-  { id: 'S4', name: 'फँसे', from: 20, to: 27 },
-  { id: 'S5', name: 'एक साथ', from: 27, to: 35 },
+  { id: 'S3', name: 'जाल', from: 13, to: 21.8 },
+  { id: 'S4', name: 'फँसे', from: 21.8, to: 27.4 },
+  { id: 'S5', name: 'एक साथ', from: 27.4, to: 35 },
   { id: 'S6', name: 'मित्र', from: 35, to: 44 },
   { id: 'S7', name: 'सीख', from: 44, to: 51 },
   { id: 'S8', name: 'श्री देसी ठेकुआ', from: 51, to: 60 },
@@ -16,9 +16,9 @@ export const sceneAt = (t: number) => SCENES.find(s => t >= s.from && t < s.to) 
 
 // key story beats (seconds), shared by the choreography, the net and the score
 export const BEAT = {
-  scatter: 13.4, netUp: 15.6, crouch: 17.3, swoop: 18.0, land: 19.9,
-  drop: 20.3, night: 20.4, hunterRise: 22.6,
-  call: 27.5, sync: 28.2, lift: 29.4, exit: 33.2,
+  scatter: 13.4, netUp: 15.6, crouch: 17.3, swoop: 19.0, land: 20.9,
+  drop: 21.9, night: 22.0, hunterRise: 24.0,
+  call: 28.2, sync: 28.9, lift: 29.9, exit: 33.4,
   arrive: 35.0, landed: 36.4, mouseOut: 36.7, nod: 38.2, chew0: 39.3, chewStep: .62, king: 43.1,
   perch: 44.0, family: 51.0, birdsLand: 52.2, card: 56.2,
 };

@@ -52,7 +52,7 @@ def duration(line):
     if os.path.exists(p):
         import soundfile as sf
         a, sr = sf.read(p)
-        return len(a) / sr
+        return len(a) / sr / line.get("tempo", 1.0)
     return 0.085 * len(line["text"]) + 0.4
 
 

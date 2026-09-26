@@ -69,6 +69,10 @@ def main():
         p = os.path.join(ROOT, "assets/vo", line["id"] + ".wav")
         if not os.path.exists(p):
             continue
+        if line.get("tempo", 1) > 1.001:
+            tmp = os.path.join(ROOT, "out", line["id"] + ".tempo.wav")
+            subprocess.run([FF, "-y", "-loglevel", "error", "-i", p, "-filter:a", f"atempo={line['tempo']:.3f}", "-ar", str(SR), tmp], check=True)
+            p = tmp
         nxt = lines[i + 1]["at"] if i + 1 < len(lines) else DUR - .3
         x = fit(p, nxt - .15 - line["at"])
         s = int(line["at"] * SR)

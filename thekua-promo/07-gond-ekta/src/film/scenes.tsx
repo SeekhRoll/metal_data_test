@@ -25,7 +25,7 @@ const Cam: React.FC<{ z: number; fx?: number; fy?: number; children: React.React
   const k = (z - 1) / .6, sx = 540 + (fx - 540) * (1 - Math.min(1, k)), sy = fy - 260 * Math.min(1, k);
   return <g transform={`translate(${sx} ${sy}) scale(${z}) translate(${-fx} ${-fy})`}>{children}</g>;
 };
-const trapZoom = (t: number) => kf(t, [[17.4, 1], [19.6, 1.6], [BEAT.lift + .2, 1.6], [BEAT.lift + 1.4, 1]]);
+const trapZoom = (t: number) => kf(t, [[18.2, 1], [20.6, 1.6], [BEAT.lift + .2, 1.6], [BEAT.lift + 1.4, 1]]);
 const tree = (t: number, grow: number, dy = 0, s = 1) => <Banyan k="banyan" x={540} y={1560 + dy} s={s} grow={grow} life={{ t }} />;
 
 // ---------------------------------------------------------------- S1 · 0-5 · a seed becomes the banyan; the title
@@ -53,7 +53,7 @@ export const S2: React.FC<SP> = ({ t, frame }) => {
 };
 
 // ---------------------------------------------------------------- S3 · 13-20 · the hunter's trap
-const hunterX = (t: number) => kf(t, [[12.9, 1200], [13.4, 860], [15.3, 860], [15.9, 760], [16.8, 760], [17.3, 930], [22.6, 930], [26.4, 820]]);
+const hunterX = (t: number) => kf(t, [[12.9, 1200], [13.4, 860], [15.3, 860], [15.9, 760], [16.8, 760], [17.3, 930], [24.0, 930], [27.2, 820]]);
 function hunterPose(t: number) {
   if (t < BEAT.scatter) return { pose: 'stand' as const, arm: -10 };
   if (t < 15.3) return { pose: 'scatter' as const, arm: 50 + 30 * Math.sin((t - BEAT.scatter) * 5) };
