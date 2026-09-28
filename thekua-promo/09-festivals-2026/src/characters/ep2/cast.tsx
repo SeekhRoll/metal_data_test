@@ -20,7 +20,7 @@ export const Throne: React.FC = () => (
     <S d="M-90 320 H150 V360 H-90Z" fill={T.ochre} sw={1.4} />
     <S d="M-80 360 L-70 440 M140 360 L130 440" sw={6} />
     <Dots pts={[[-86, 340], [146, 340]]} step={8} r={2} c={T.white} />
-    <S d="M-60 330 H140 V300 C80 290 -20 290 -60 300Z" fill={T.red} sw={1.2} />
+    <S d="M-60 330 H140 V300 C80 290 -20 290 -60 300Z" fill={T.teal} sw={1.2} />
   </g>
 );
 export const Indrasen: React.FC<{ pose?: 'throne' | 'namaskar' | 'offer' | 'down'; blink?: number }> = ({ pose = 'throne', blink = 0 }) => (
@@ -28,7 +28,7 @@ export const Indrasen: React.FC<{ pose?: 'throne' | 'namaskar' | 'offer' | 'down
     <g data-id="indrasen">
       {pose === 'throne' && <Throne />}
       <MaleBody arms={pose === 'throne' ? 'abhaya' : pose} legs={pose === 'throne' ? 'seated' : 'stand'}
-        garb={{ dhoti: T.red, sash: T.yellow, uttariya: T.green, skin: T.skin, border: T.yellow, garland: true, dhotiLen: 620 }}
+        garb={{ dhoti: T.blue, sash: T.yellow, uttariya: T.green, skin: T.skin, border: T.yellow, garland: true, dhotiLen: 620 }}
         head={<PattaHead crown="mukuta" blink={blink} />} nearProp={jewels} />
     </g>
   </Patta>
@@ -37,7 +37,7 @@ export const Indrasen: React.FC<{ pose?: 'throne' | 'namaskar' | 'offer' | 'down
 export const Queen: React.FC<{ blink?: number; arms?: 'namaskar' | 'offer' | 'down' }> = ({ blink = 0, arms = 'namaskar' }) => (
   <Patta>
     <g data-id="queen">
-      <MaleBody arms={arms} legs="stand" garb={{ dhoti: T.blue, sash: T.pink, uttariya: T.pink, skin: T.skin, border: T.yellow, dhotiLen: 650, hair: null }}
+      <MaleBody arms={arms} legs="stand" garb={{ dhoti: T.green, sash: T.pink, uttariya: T.pink, skin: T.skin, border: T.yellow, dhotiLen: 650, hair: null }}
         head={<PattaHead crown="queen" blink={blink} />} nearProp={<g><S d="M-40 110 C-20 90 30 96 50 130 C54 160 40 180 30 186 C0 190 -30 186 -44 176Z" fill={T.pink} sw={1.2} /><Dots pts={[[-40, 176], [30, 186]]} step={6} r={1.6} c={T.yellow} /></g>} />
     </g>
   </Patta>
