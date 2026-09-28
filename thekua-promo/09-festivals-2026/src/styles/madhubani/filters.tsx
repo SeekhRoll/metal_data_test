@@ -41,6 +41,9 @@ export const Defs: React.FC<{ boilSeed?: number; boil?: number }> = ({ boilSeed 
       <line x1="0" y1="0" x2="0" y2="12" stroke={C.black} strokeWidth="1.6" />
       <line x1="0" y1="0" x2="12" y2="0" stroke={C.black} strokeWidth="1.6" />
     </pattern>
+    <pattern id="stripes" width="40" height="34" patternUnits="userSpaceOnUse">
+      <path d="M4 2 C14 10 10 22 20 32 M24 0 C32 8 30 18 38 26" fill="none" stroke={C.black} strokeWidth="5" strokeLinecap="round" />
+    </pattern>
     <pattern id="patches" width="60" height="70" patternUnits="userSpaceOnUse">
       <rect x="8" y="10" width="18" height="16" fill={C.paperShade} stroke={C.black} strokeWidth="1.8" strokeDasharray="3 3" />
       <rect x="36" y="44" width="16" height="14" fill={C.turmericLight} stroke={C.black} strokeWidth="1.8" strokeDasharray="3 3" />

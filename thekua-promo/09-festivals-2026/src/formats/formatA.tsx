@@ -13,11 +13,15 @@ import days from '../../data/navratri-days.json';
 import atl from './a-timeline.json';
 import { DAY1 } from '../stories/day1';
 import { DAY2 } from '../stories/day2';
+import { DAY3 } from '../stories/day3';
+import { Defs as MDefs, Paper as MPaper, PigmentVeil } from '../styles/madhubani/filters';
+import { MadhubaniBorder } from '../styles/madhubani/MadhubaniBorder';
+import { C as MC } from '../styles/madhubani/palette';
 
 // Format A · देवी कथा: one scene per VO line (scripts/fit_a.py -> a-timeline.json), in the day's own art form.
 type AT = { dur: number; lines: { id: string; text: string; at: number; dur: number }[]; scenes: Scene[] };
-type Story = { page: 'pahari' | 'sanjhi'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
-const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2 };
+type Story = { page: 'pahari' | 'sanjhi' | 'madhubani'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
+const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3 };
 export const aTimeline = (d: number): AT | null => (atl as Record<string, AT>)[String(d)] ?? null;
 export const aFrames = (d: number) => Math.round((aTimeline(d)?.dur ?? 50) * FPS);
 export const hasStory = (d: number) => !!STORIES[d] && !!aTimeline(d);
@@ -35,6 +39,26 @@ export const FormatAFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
     {moral && <TextZone id="moral" z={{ x: 90, y: 1600, w: 900, h: 230 }} opacity={seg(t, moralLine.at - .3, moralLine.at + .4)}><T size={d.story.moralHi.length > 44 ? 38 : 44} color={P.borderDeep} font={FONT.rozha}>{d.story.moralHi}</T></TextZone>}
     {!moral && <Subtitles cues={cues} t={t} z={{ x: 90, y: 1600, w: 900, h: 230 }} color={P.ink} />}
   </>;
+  if (st.page === 'madhubani') {
+    // brief: reuse the Madhubani engine (bharni double lines, motif border, line boil); text sits on a paper cartouche
+    const f = Math.round(t * FPS), sl = idx > 0 && u < .6 ? ease(seg(u, 0, .6)) : 1;
+    return (
+      <AbsoluteFill style={{ background: MC.paper }}>
+        <svg viewBox="0 0 1080 1920" width={1080} height={1920}>
+          <MDefs boilSeed={Math.floor(f / 2) % 997 + 1} boil={2.2} />
+          <MPaper w={1080} h={1920} />
+          <g filter="url(#boil)">
+            <g opacity={sl}><Scene t={t} u={u} dur={dur} /></g>
+            <rect x={100} y={1586} width={880} height={250} rx={20} fill={MC.paper} stroke={MC.black} strokeWidth={4} />
+            <rect x={112} y={1598} width={856} height={226} rx={14} fill="none" stroke={MC.vermilion} strokeWidth={3} />
+            <MadhubaniBorder w={1080} h={1920} draw={1} />
+          </g>
+          <PigmentVeil w={1080} h={1920} />
+        </svg>
+        {texts}
+      </AbsoluteFill>
+    );
+  }
   if (st.page === 'sanjhi') {
     return (
       <AbsoluteFill style={{ background: '#2A2420' }}>
@@ -61,6 +85,6 @@ export const FormatAFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
 };
 
 export const FormatA: React.FC<{ day: number }> = ({ day }) => { const f = useCurrentFrame(); return <FormatAFrame t={f / FPS} day={day} />; };
-const CLIP = { x0: 40, y0: 40, x1: 1040, y1: 1580 };
+const CLIP = { x0: 40, y0: 40, x1: 1040, y1: 1580 };  // Madhubani cartouche starts at 1586
 const CHECK_A = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => makeCheck(({ t }) => <FormatAFrame t={t} day={d} />, [], CLIP));
 export const FormatACheck: React.FC<{ day: number }> = ({ day }) => { const C = CHECK_A[day - 1]; return <C />; };

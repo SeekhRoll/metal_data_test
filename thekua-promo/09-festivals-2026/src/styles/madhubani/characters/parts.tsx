@@ -6,13 +6,15 @@ import { Bharni, Line, tube, lens, circle } from '../paint';
 // one continuous forehead-to-nose line, long fingers, flat feet. Every pose is its own drawing
 // assembled from these parts; nothing is rotated at a joint (brief 3.3, replacement animation).
 
-export type Kind = 'sudama' | 'wife' | 'krishna';
+export type Kind = 'sudama' | 'wife' | 'krishna' | 'parvati' | 'maina' | 'devi' | 'shiva' | 'groom' | 'gana';
+// female figures share the saree drawings
+export const isF = (k: Kind) => k === 'wife' || k === 'parvati' || k === 'maina' || k === 'devi';
 export type Eye = 'open' | 'closed' | 'down';
 export type Mouth = 'neutral' | 'smile' | 'open';
 export type XY = [number, number];
 export type Spine = [number, number, number][];
 
-export const SKIN: Record<Kind, string> = { sudama: C.turmericLight, wife: C.turmericLight, krishna: C.indigoLight };
+export const SKIN: Record<Kind, string> = { sudama: C.turmericLight, wife: C.turmericLight, krishna: C.indigoLight, parvati: C.turmericLight, maina: C.turmericLight, devi: C.turmeric, shiva: '#DCE2E4', groom: C.indigoLight, gana: C.leaf };
 
 // ---------------------------------------------------------------- head (facing right, centre at 0,0)
 const FACE = 'M-4 -64 C16 -66 31 -57 35 -40 C37 -31 38 -27 41 -22 L68 6 C62 11 51 11 45 11 C48 14 50 17 47 20 C44 21 43 22 44 24 C48 26 48 31 43 34 C43 44 37 53 23 55 C9 57 -3 55 -10 49 C-40 41 -58 13 -56 -18 C-54 -46 -33 -63 -4 -64 Z';
@@ -66,8 +68,14 @@ export const Head: React.FC<{ kind: Kind; eye?: Eye; mouth?: Mouth; tear?: boole
   return (
     <g>
       {/* behind the face */}
-      {kind === 'wife' && <Bharni d={circle(-56, -6, 24)} fill={C.black} band={2} hatch={false} />}
-      {kind === 'wife' && <Bharni d="M26 -62 C0 -82 -54 -74 -70 -30 C-80 2 -76 44 -64 84 L-40 88 C-52 44 -54 2 -44 -30 C-34 -56 -2 -64 26 -62 Z" fill={C.vermilion} pattern="dotsPaper" band={3.5} />}
+      {isF(kind) && <Bharni d={circle(-56, -6, 24)} fill={C.black} band={2} hatch={false} />}
+      {isF(kind) && <Bharni d="M26 -62 C0 -82 -54 -74 -70 -30 C-80 2 -76 44 -64 84 L-40 88 C-52 44 -54 2 -44 -30 C-34 -56 -2 -64 26 -62 Z" fill={kind === 'maina' ? C.indigo : kind === 'devi' ? C.vermilion : kind === 'parvati' ? C.leaf : C.vermilion} pattern="dotsPaper" band={3.5} />}
+      {(kind === 'shiva') && (
+        <g>
+          <Bharni d="M-4 -64 C-33 -63 -54 -46 -56 -18 C-60 20 -64 62 -52 94 C-42 100 -30 96 -26 84 C-34 50 -30 2 -18 -28 C-8 -46 6 -56 22 -60 C14 -64 6 -65 -4 -64 Z" fill={C.ochre} band={2} />
+          {[0, 1, 2, 3, 4].map((i) => <path key={i} d={`M${-50 + i * 6} ${-20 + i * 20} C${-70 + i * 4} ${10 + i * 20} ${-62 + i * 4} ${40 + i * 20} ${-72 + i * 6} ${70 + i * 10}`} stroke={C.black} strokeWidth={3} fill="none" />)}
+        </g>
+      )}
       {kind === 'krishna' && (
         <g>
           <path d="M-16 -108 C-30 -140 -46 -170 -62 -206" fill="none" stroke={C.black} strokeWidth={7} strokeLinecap="round" />
@@ -99,7 +107,7 @@ export const Head: React.FC<{ kind: Kind; eye?: Eye; mouth?: Mouth; tear?: boole
           <path d="M31 -58 L31 -50" stroke={C.vermilion} strokeWidth={2.4} />
         </g>
       )}
-      {kind === 'wife' && (
+      {isF(kind) && (
         <g>
           <path d="M-4 -64 C-33 -63 -54 -46 -56 -18 C-57 4 -50 22 -40 34 C-40 8 -36 -20 -20 -40 C-8 -52 8 -58 22 -60 C14 -64 6 -65 -4 -64 Z" fill={C.black} />
           <path d="M22 -61 L2 -66" stroke={C.vermilion} strokeWidth={4} strokeLinecap="round" />
@@ -107,6 +115,36 @@ export const Head: React.FC<{ kind: Kind; eye?: Eye; mouth?: Mouth; tear?: boole
           <circle cx={50} cy={12} r={9} fill="none" stroke={C.turmeric} strokeWidth={3} />
           <Bharni d="M28 -62 C4 -80 -44 -74 -60 -36 C-44 -64 -8 -70 28 -62 Z" fill={C.vermilion} band={2.5} hatch={false} />
           <Kundal x={-22} y={4} />
+        </g>
+      )}
+      {(kind === 'parvati' || kind === 'devi') && (
+        <g>
+          <Bharni d={kind === 'devi' ? 'M-44 -54 L-38 -118 L-20 -96 L-4 -140 L12 -98 L28 -118 L34 -56 C10 -70 -22 -68 -44 -54 Z' : 'M-38 -58 L-32 -92 L-16 -78 L-2 -104 L12 -80 L26 -94 L30 -60 C8 -70 -18 -68 -38 -58 Z'} fill={C.turmeric} band={3} />
+          {kind === 'devi' && <g><Line d="M-6 -74 C-6 -96 30 -104 38 -86 C44 -72 36 -62 26 -60 L18 -60 C8 -62 -6 -64 -6 -74 Z" fill={C.paper} w={2.4} /><path d="M-2 -66 H34" stroke={C.black} strokeWidth={2.4} /><circle cx={16} cy={-56} r={4} fill={C.turmeric} stroke={C.black} strokeWidth={1.6} /></g>}
+        </g>
+      )}
+      {kind === 'shiva' && (
+        <g>
+          <Bharni d="M-40 -56 C-52 -110 -8 -134 12 -100 C22 -82 12 -64 -4 -62 C-18 -60 -30 -56 -40 -56 Z" fill={C.ochre} band={2.5} />
+          <Line d="M4 -118 A16 16 0 1 0 32 -122 A12 12 0 1 1 4 -118 Z" fill={C.paper} w={2.2} />
+          <path d="M26 -36 C28 -42 32 -42 33 -36 C32 -30 28 -30 26 -36 Z" fill={C.vermilion} stroke={C.black} strokeWidth={1.6} />
+          <path d="M0 50 C-20 70 20 84 40 70 C54 60 46 46 36 46" fill="none" stroke={C.leaf} strokeWidth={7} />
+          <path d="M0 50 C-20 70 20 84 40 70 C54 60 46 46 36 46" fill="none" stroke={C.black} strokeWidth={9} strokeDasharray="2 6" opacity={.5} />
+        </g>
+      )}
+      {kind === 'groom' && (
+        <g>
+          <Bharni d="M-4 -64 C-33 -63 -54 -46 -56 -18 C-58 10 -54 40 -46 60 C-40 30 -36 -10 -20 -38 C-8 -52 8 -58 22 -60 C14 -64 6 -65 -4 -64 Z" fill={C.black} band={2} hatch={false} />
+          <Bharni d="M-44 -54 L-38 -116 L-20 -94 L-4 -138 L12 -96 L28 -116 L34 -56 C10 -70 -22 -68 -44 -54 Z" fill={C.turmeric} band={3} />
+          <Line d="M-2 -120 A14 14 0 1 0 22 -124 A10 10 0 1 1 -2 -120 Z" fill={C.paper} w={2} />
+          {[-24, -4, 16].map(x => <circle key={x} cx={x} cy={-74} r={5} fill={C.vermilion} stroke={C.black} strokeWidth={1.8} />)}
+          <Kundal x={-22} y={4} />
+        </g>
+      )}
+      {kind === 'gana' && (
+        <g>
+          {Array.from({ length: 7 }, (_, i) => <path key={i} d={`M${-40 + i * 12} -60 L${-50 + i * 14} -104 L${-28 + i * 12} -64`} fill={C.black} />)}
+          <circle cx={20} cy={-20} r={16} fill={C.paper} stroke={C.black} strokeWidth={3} /><circle cx={24} cy={-20} r={7} fill={C.black} />
         </g>
       )}
       {kind === 'krishna' && (
@@ -210,25 +248,25 @@ const armTube = (sp: Spine) => tube(sp.map(([x, y], i) => [x, y, [26, 22, 17, 16
 function lowerGarment(kind: Kind, n: Leg, f: Leg) {
   const [kn, kf] = [n.knee, f.knee];
   const front = kn[0] > kf[0] ? kn : kf, back = kn[0] > kf[0] ? kf : kn;
-  if (kind === 'wife') return (
+  if (isF(kind)) return (
     <g>
-      <Bharni d="M-50 -448 L42 -448 C58 -330 72 -150 84 -12 L-74 -12 C-66 -150 -62 -330 -50 -448 Z" fill={C.vermilion} pattern="dotsPaper" band={4} />
+      <Bharni d="M-50 -448 L42 -448 C58 -330 72 -150 84 -12 L-74 -12 C-66 -150 -62 -330 -50 -448 Z" fill={kind === 'maina' ? C.leaf : kind === 'parvati' ? C.indigoLight : C.vermilion} pattern="dotsPaper" band={4} />
       <Bharni d="M-74 -12 L84 -12 L80 -56 L-70 -56 Z" fill={C.leaf} band={3} />
       {[-30, -8, 14].map(x => <path key={x} d={`M${x} -440 C${x + 4} -300 ${x + 10} -150 ${x + 16} -60`} fill="none" stroke={C.black} strokeWidth={2.5} />)}
     </g>
   );
   const d = `M-46 -452 L40 -452 C56 -390 ${front[0] + 44} ${front[1] - 110} ${front[0] + 32} ${front[1]} L${front[0] - 26} ${front[1] + 10} C${front[0] - 20} ${front[1] - 50} 8 -250 -4 -266 C-14 -250 ${back[0] + 22} ${back[1] - 50} ${back[0] + 26} ${back[1] + 10} L${back[0] - 34} ${back[1]} C${back[0] - 44} ${back[1] - 110} -60 -390 -46 -452 Z`;
-  const k = kind === 'krishna';
+  const k = kind === 'krishna' || kind === 'groom';
   return (
     <g>
-      <Bharni d={d} fill={k ? C.turmeric : C.ochre} pattern={k ? 'dotsBlack' : 'patches'} band={4.5} />
+      <Bharni d={d} fill={k ? C.turmeric : kind === 'shiva' ? C.turmericLight : kind === 'gana' ? C.ochre : C.ochre} pattern={k ? 'dotsBlack' : kind === 'shiva' ? 'stripes' : 'patches'} band={4.5} />
       <path d={`M${front[0] + 30} ${front[1] - 6} L${front[0] - 24} ${front[1] + 4} M${back[0] + 24} ${back[1] + 4} L${back[0] - 32} ${back[1] - 6}`} stroke={C.vermilion} strokeWidth={9} />
     </g>
   );
 }
 
 function lap(kind: Kind) {
-  const saree = kind === 'wife';
+  const saree = isF(kind);
   const d = saree
     ? 'M-52 -238 L42 -238 C84 -200 136 -120 136 -50 C136 -20 114 -6 84 -6 L-62 -6 C-82 -20 -82 -100 -72 -160 C-66 -200 -58 -220 -52 -238 Z'
     : 'M-46 -238 L40 -238 C72 -200 150 -126 172 -62 C178 -30 160 -8 130 -6 L-30 -6 C-62 -10 -72 -60 -66 -120 C-62 -170 -54 -210 -46 -238 Z';
@@ -244,7 +282,7 @@ function lap(kind: Kind) {
 function torso(kind: Kind) {
   const skin = SKIN[kind];
   const TORSO = 'M-42 -606 C-12 -616 18 -614 36 -602 C52 -584 54 -540 44 -500 C40 -470 38 -448 36 -432 L-38 -432 C-46 -470 -52 -540 -50 -576 C-49 -594 -47 -602 -42 -606 Z';
-  if (kind === 'wife') return (
+  if (isF(kind)) return (
     <g>
       <Line d={TORSO} fill={skin} w={3.2} />
       <Bharni d="M-42 -606 C-12 -616 18 -614 36 -602 C52 -584 54 -548 46 -520 L-48 -520 C-50 -560 -50 -590 -42 -606 Z" fill={C.leaf} pattern="dotsBlack" band={3} />
@@ -257,7 +295,8 @@ function torso(kind: Kind) {
       {kind === 'sudama' && [0, 1, 2].map(i => <path key={i} d={`M-6 ${-566 + i * 20} C8 ${-574 + i * 20} 24 ${-572 + i * 20} 34 ${-562 + i * 20}`} fill="none" stroke={C.black} strokeWidth={2.2} />)}
       {kind === 'sudama' && <Bharni d="M-48 -600 L-20 -612 L42 -472 L30 -446 Z" fill={C.paperShade} band={3} />}
       {kind === 'sudama' && <path d="M-40 -600 L34 -454" stroke={C.black} strokeWidth={1.6} strokeDasharray="4 4" />}
-      {kind === 'krishna' && (
+      {kind === 'shiva' && <g>{Array.from({ length: 12 }, (_, i) => { const u = i / 11; return <circle key={i} cx={-24 + u * 56} cy={-600 + Math.sin(u * Math.PI) * 40} r={5} fill={C.ochre} stroke={C.black} strokeWidth={1.6} />; })}</g>}
+      {(kind === 'krishna' || kind === 'groom') && (
         <g>
           <path d="M-20 -606 C-6 -580 20 -580 32 -604" fill="none" stroke={C.turmeric} strokeWidth={7} />
           <path d="M-20 -606 C-6 -580 20 -580 32 -604" fill="none" stroke={C.black} strokeWidth={9} strokeDasharray="2 6" opacity={.6} />
@@ -280,21 +319,21 @@ export const Figure: React.FC<{ spec: FigureSpec }> = ({ spec: s }) => {
     </g>
   );
   const handN = s.armNear[s.armNear.length - 1], handF = s.armFar[s.armFar.length - 1];
-  const bangles = k !== 'sudama';
+  const bangles = k !== 'sudama' && k !== 'gana' && k !== 'shiva';
   return (
     <g transform={`translate(0 ${s.dy || 0})`}>
       <g transform={`translate(0 ${up}) rotate(${s.lean || 0} 0 -440)`}>
         {s.behind}
         <Line d={armTube(s.armFar)} fill={skin} w={3.8} />
-        {k === 'krishna' && <ArmBand sp={s.armFar} />}
+        {(k === 'krishna' || k === 'groom' || k === 'devi') && <ArmBand sp={s.armFar} />}
         <Hand x={handF[0]} y={handF[1]} a={angleOf(s.armFar)} kind={s.handFar} skin={skin} bangles={bangles} />
         {s.holdFar}
       </g>
       {s.sit ? lap(k) : (
         <g>
-          {k !== 'wife' && leg(legF)}
-          {k !== 'wife' && leg(legN)}
-          {k === 'wife' && <Foot x={legN.ankle[0] + 20} y={-14} skin={skin} anklet />}
+          {!isF(k) && leg(legF)}
+          {!isF(k) && leg(legN)}
+          {isF(k) && <Foot x={legN.ankle[0] + 20} y={-14} skin={skin} anklet />}
           {lowerGarment(k, legN, legF)}
         </g>
       )}
@@ -305,7 +344,7 @@ export const Figure: React.FC<{ spec: FigureSpec }> = ({ spec: s }) => {
           <Head kind={k} eye={s.head.eye} mouth={s.head.mouth} tear={s.head.tear} />
         </g>
         <Line d={armTube(s.armNear)} fill={skin} w={3.8} />
-        {k === 'krishna' && <ArmBand sp={s.armNear} />}
+        {(k === 'krishna' || k === 'groom' || k === 'devi') && <ArmBand sp={s.armNear} />}
         {s.holdNear}
         <Hand x={handN[0]} y={handN[1]} a={angleOf(s.armNear)} kind={s.handNear} skin={skin} bangles={bangles} />
         {s.extra}
