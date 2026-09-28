@@ -1,0 +1,46 @@
+{
+ "brand": "Shri Desi Thekua",
+ "brandHi": "श्री देसी ठेकुआ",
+ "products": [
+  {
+   "id": "thekua",
+   "name": "Shri Desi Thekua",
+   "weight": "250 g",
+   "price": 200
+  },
+  {
+   "id": "sev",
+   "name": "Shri Besan Sev",
+   "weight": "250 g",
+   "price": 100
+  },
+  {
+   "id": "papdi",
+   "name": "Shri Crispy Papdi",
+   "weight": "250 g",
+   "price": 175
+  },
+  {
+   "id": "cookies",
+   "name": "Shri Crunchy Thekua Cookies",
+   "weight": "250 g",
+   "price": 250
+  },
+  {
+   "id": "baked",
+   "name": "Shri Desi Baked Thekua",
+   "weight": "200 g",
+   "price": 300
+  }
+ ],
+ "claims": [
+  "No Preservative",
+  "No Palm Oil"
+ ],
+ "delivery": "₹30",
+ "phone": "8178226605",
+ "orderNotes": [
+  "अगले दिन डिलीवरी के लिए एक दिन पहले ऑर्डर करें",
+  "उसी दिन डिलीवरी के लिए सुबह 10 बजे तक ऑर्डर करें"
+ ]
+}

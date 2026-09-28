@@ -1,0 +1,383 @@
+[
+ {
+  "day": 1,
+  "dayNameHi": "पहला दिन",
+  "dayNumHi": "१",
+  "date": "2026-10-11",
+  "weekdayHi": "रविवार",
+  "devi": {
+   "nameHi": "माँ शैलपुत्री",
+   "nameEn": "Shailaputri"
+  },
+  "colour": {
+   "nameHi": "नारंगी",
+   "hex": "#E8731C",
+   "meaningHi": "ऊर्जा और उत्साह"
+  },
+  "bhogHi": "शुद्ध घी",
+  "mantra": "ॐ देवी शैलपुत्र्यै नमः॥",
+  "iconography": {
+   "arms": 2,
+   "vahana": "bull (Nandi)",
+   "holds": [
+    "trishul (right)",
+    "lotus (left)"
+   ],
+   "features": [
+    "crescent moon on forehead"
+   ]
+  },
+  "artForm": {
+   "styleId": "pahari",
+   "nameHi": "पहाड़ी लघुचित्र",
+   "regionHi": "हिमाचल प्रदेश",
+   "titleLineHi": "पहाड़ी लघुचित्र शैली में · हिमाचल प्रदेश"
+  },
+  "story": {
+   "titleHi": "पर्वत की बेटी",
+   "moralHi": "सम्मान से बड़ा कुछ नहीं… और सच्चा संकल्प, हर जन्म में लौट आता है।"
+  }
+ },
+ {
+  "day": 2,
+  "dayNameHi": "दूसरा दिन",
+  "dayNumHi": "२",
+  "date": "2026-10-12",
+  "weekdayHi": "सोमवार",
+  "devi": {
+   "nameHi": "माँ ब्रह्मचारिणी",
+   "nameEn": "Brahmacharini"
+  },
+  "colour": {
+   "nameHi": "सफ़ेद",
+   "hex": "#F2EFE6",
+   "meaningHi": "शांति और पवित्रता"
+  },
+  "bhogHi": "मिश्री",
+  "mantra": "ॐ देवी ब्रह्मचारिण्यै नमः॥",
+  "iconography": {
+   "arms": 2,
+   "vahana": "walks barefoot",
+   "holds": [
+    "japa mala",
+    "kamandalu"
+   ],
+   "features": [
+    "white attire",
+    "serene"
+   ]
+  },
+  "artForm": {
+   "styleId": "sanjhi",
+   "nameHi": "साँझी कला",
+   "regionHi": "मथुरा-वृंदावन, उत्तर प्रदेश",
+   "titleLineHi": "साँझी कला शैली में · मथुरा-वृंदावन, उत्तर प्रदेश"
+  },
+  "story": {
+   "titleHi": "अपर्णा",
+   "moralHi": "संकल्प सच्चा हो, तो कोई लक्ष्य दूर नहीं।"
+  }
+ },
+ {
+  "day": 3,
+  "dayNameHi": "तीसरा दिन",
+  "dayNumHi": "३",
+  "date": "2026-10-13",
+  "weekdayHi": "मंगलवार",
+  "devi": {
+   "nameHi": "माँ चंद्रघंटा",
+   "nameEn": "Chandraghanta"
+  },
+  "colour": {
+   "nameHi": "लाल",
+   "hex": "#C8242B",
+   "meaningHi": "शक्ति और साहस"
+  },
+  "bhogHi": "दूध या खीर",
+  "mantra": "ॐ देवी चन्द्रघण्टायै नमः॥",
+  "iconography": {
+   "arms": 10,
+   "vahana": "tiger",
+   "holds": [
+    "trishul",
+    "gada",
+    "sword",
+    "kamandalu",
+    "lotus",
+    "arrow",
+    "bow",
+    "japa mala",
+    "abhaya mudra",
+    "varada mudra"
+   ],
+   "features": [
+    "bell-shaped half-moon on forehead",
+    "golden"
+   ]
+  },
+  "artForm": {
+   "styleId": "madhubani",
+   "nameHi": "मधुबनी चित्रकला",
+   "regionHi": "मिथिला, बिहार",
+   "titleLineHi": "मधुबनी चित्रकला शैली में · मिथिला, बिहार"
+  },
+  "story": {
+   "titleHi": "दूल्हा बदल गया",
+   "moralHi": "साहस और कोमलता — दोनों साथ चल सकते हैं।"
+  }
+ },
+ {
+  "day": 4,
+  "dayNameHi": "चौथा दिन",
+  "dayNumHi": "४",
+  "date": "2026-10-14",
+  "weekdayHi": "बुधवार",
+  "devi": {
+   "nameHi": "माँ कूष्माण्डा",
+   "nameEn": "Kushmanda"
+  },
+  "colour": {
+   "nameHi": "रॉयल ब्लू",
+   "hex": "#2742A8",
+   "meaningHi": "दिव्यता और गहराई"
+  },
+  "bhogHi": "मालपुआ",
+  "mantra": "ॐ देवी कूष्माण्डायै नमः॥",
+  "iconography": {
+   "arms": 8,
+   "vahana": "lion",
+   "holds": [
+    "kamandalu",
+    "bow",
+    "arrow",
+    "lotus",
+    "amrit kalash",
+    "chakra",
+    "gada",
+    "japa mala"
+   ],
+   "features": [
+    "radiant like the sun"
+   ]
+  },
+  "artForm": {
+   "styleId": "kolam",
+   "nameHi": "कोलम कला",
+   "regionHi": "तमिलनाडु",
+   "titleLineHi": "कोलम कला शैली में · तमिलनाडु"
+  },
+  "story": {
+   "titleHi": "एक मुस्कान",
+   "moralHi": "एक सच्ची मुस्कान में, पूरी दुनिया रचने की ताक़त होती है।"
+  }
+ },
+ {
+  "day": 5,
+  "dayNameHi": "पाँचवाँ दिन",
+  "dayNumHi": "५",
+  "date": "2026-10-15",
+  "weekdayHi": "गुरुवार",
+  "devi": {
+   "nameHi": "माँ स्कंदमाता",
+   "nameEn": "Skandamata"
+  },
+  "colour": {
+   "nameHi": "पीला",
+   "hex": "#F2C318",
+   "meaningHi": "आनंद और उजाले"
+  },
+  "bhogHi": "केला",
+  "mantra": "ॐ देवी स्कन्दमातायै नमः॥",
+  "iconography": {
+   "arms": 4,
+   "vahana": "lion; seated on lotus",
+   "holds": [
+    "lotus",
+    "lotus",
+    "abhaya mudra",
+    "baby Skanda"
+   ],
+   "features": [
+    "six-faced baby Skanda on her lap"
+   ]
+  },
+  "artForm": {
+   "styleId": "kerala-mural",
+   "nameHi": "केरल भित्तिचित्र",
+   "regionHi": "केरल",
+   "titleLineHi": "केरल भित्तिचित्र शैली में · केरल"
+  },
+  "story": {
+   "titleHi": "माँ की ममता",
+   "moralHi": "हर वीर के पीछे, एक माँ की ममता होती है।"
+  }
+ },
+ {
+  "day": 6,
+  "dayNameHi": "छठा दिन",
+  "dayNumHi": "६",
+  "date": "2026-10-16",
+  "weekdayHi": "शुक्रवार",
+  "devi": {
+   "nameHi": "माँ कात्यायनी",
+   "nameEn": "Katyayani"
+  },
+  "colour": {
+   "nameHi": "हरा",
+   "hex": "#2E8B3E",
+   "meaningHi": "नई शुरुआत"
+  },
+  "bhogHi": "शहद",
+  "mantra": "ॐ देवी कात्यायन्यै नमः॥",
+  "iconography": {
+   "arms": 4,
+   "vahana": "lion",
+   "holds": [
+    "sword",
+    "lotus",
+    "abhaya mudra",
+    "varada mudra"
+   ],
+   "features": [
+    "warrior radiance"
+   ]
+  },
+  "artForm": {
+   "styleId": "bengal-pat",
+   "nameHi": "बंगाल पटचित्र",
+   "regionHi": "पश्चिम बंगाल",
+   "titleLineHi": "बंगाल पटचित्र शैली में · पश्चिम बंगाल"
+  },
+  "story": {
+   "titleHi": "अन्याय का अंत",
+   "moralHi": "अन्याय के सामने, चुप रहना धर्म नहीं।"
+  }
+ },
+ {
+  "day": 7,
+  "dayNameHi": "सातवाँ दिन",
+  "dayNumHi": "७",
+  "date": "2026-10-17",
+  "weekdayHi": "शनिवार",
+  "devi": {
+   "nameHi": "माँ कालरात्रि",
+   "nameEn": "Kalaratri"
+  },
+  "colour": {
+   "nameHi": "ग्रे",
+   "hex": "#8A8D91",
+   "meaningHi": "संतुलन"
+  },
+  "bhogHi": "गुड़",
+  "mantra": "ॐ देवी कालरात्र्यै नमः॥",
+  "iconography": {
+   "arms": 4,
+   "vahana": "donkey",
+   "holds": [
+    "sickle-sword",
+    "vajra",
+    "abhaya mudra",
+    "varada mudra"
+   ],
+   "features": [
+    "dark complexion",
+    "loose hair",
+    "three eyes",
+    "lightning-bright necklace"
+   ]
+  },
+  "artForm": {
+   "styleId": "shadow-puppet",
+   "nameHi": "तोलु बोम्मलाटा छाया कठपुतली",
+   "regionHi": "आंध्र प्रदेश",
+   "titleLineHi": "तोलु बोम्मलाटा छाया कठपुतली शैली में · आंध्र प्रदेश"
+  },
+  "story": {
+   "titleHi": "शुभंकरी",
+   "moralHi": "रूप से नहीं… कर्म से पहचानिए।"
+  }
+ },
+ {
+  "day": 8,
+  "dayNameHi": "अष्टमी",
+  "dayNumHi": "८",
+  "date": "2026-10-18",
+  "weekdayHi": "रविवार",
+  "devi": {
+   "nameHi": "माँ महागौरी",
+   "nameEn": "Mahagauri"
+  },
+  "colour": {
+   "nameHi": "बैंगनी",
+   "hex": "#6B3FA0",
+   "meaningHi": "भक्ति और गरिमा"
+  },
+  "bhogHi": "नारियल",
+  "mantra": "ॐ देवी महागौर्यै नमः॥",
+  "iconography": {
+   "arms": 4,
+   "vahana": "white bull",
+   "holds": [
+    "trishul",
+    "damaru",
+    "abhaya mudra",
+    "varada mudra"
+   ],
+   "features": [
+    "white garments",
+    "moonlike radiance"
+   ]
+  },
+  "artForm": {
+   "styleId": "mysore",
+   "nameHi": "मैसूर चित्रकला",
+   "regionHi": "कर्नाटक",
+   "titleLineHi": "मैसूर चित्रकला शैली में · कर्नाटक"
+  },
+  "story": {
+   "titleHi": "भीतर का तेज़",
+   "moralHi": "सच्ची साधना का तेज़… भीतर से चमकता है।"
+  }
+ },
+ {
+  "day": 9,
+  "dayNameHi": "नवमी",
+  "dayNumHi": "९",
+  "date": "2026-10-19",
+  "weekdayHi": "सोमवार",
+  "devi": {
+   "nameHi": "माँ सिद्धिदात्री",
+   "nameEn": "Siddhidatri"
+  },
+  "colour": {
+   "nameHi": "मोर-हरा",
+   "hex": "#1E8C87",
+   "meaningHi": "समृद्धि और पूर्णता"
+  },
+  "bhogHi": "तिल, और कन्याओं के लिए हलवा-पूरी-चना",
+  "mantra": "ॐ देवी सिद्धिदात्र्यै नमः॥",
+  "iconography": {
+   "arms": 4,
+   "vahana": "lotus seat",
+   "holds": [
+    "chakra",
+    "gada",
+    "shankh",
+    "lotus"
+   ],
+   "features": [
+    "surrounded by devotees and sages"
+   ]
+  },
+  "artForm": {
+   "styleId": "tanjore",
+   "nameHi": "तंजावुर चित्रकला",
+   "regionHi": "तमिलनाडु",
+   "titleLineHi": "तंजावुर चित्रकला शैली में · तमिलनाडु"
+  },
+  "story": {
+   "titleHi": "अर्धनारीश्वर",
+   "moralHi": "शिव और शक्ति — एक के बिना, दूसरा अधूरा।"
+  }
+ }
+]
