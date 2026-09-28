@@ -1,0 +1,55 @@
+{
+ "dur": 94.6,
+ "scenes": [
+  {
+   "id": "title",
+   "from": 0.0,
+   "to": 6.8
+  },
+  {
+   "id": "yagya",
+   "from": 6.8,
+   "to": 19.0
+  },
+  {
+   "id": "sons",
+   "from": 19.0,
+   "to": 31.0
+  },
+  {
+   "id": "gaze",
+   "from": 31.0,
+   "to": 39.4
+  },
+  {
+   "id": "generations",
+   "from": 39.4,
+   "to": 51.4
+  },
+  {
+   "id": "tapasya",
+   "from": 51.4,
+   "to": 61.6
+  },
+  {
+   "id": "ganga",
+   "from": 61.6,
+   "to": 73.8
+  },
+  {
+   "id": "liberation",
+   "from": 73.8,
+   "to": 84.0
+  },
+  {
+   "id": "moral",
+   "from": 84.0,
+   "to": 89.6
+  },
+  {
+   "id": "closing",
+   "from": 89.6,
+   "to": 94.6
+  }
+ ]
+}
