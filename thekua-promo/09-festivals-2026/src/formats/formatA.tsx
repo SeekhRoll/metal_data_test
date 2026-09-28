@@ -14,14 +14,16 @@ import atl from './a-timeline.json';
 import { DAY1 } from '../stories/day1';
 import { DAY2 } from '../stories/day2';
 import { DAY3 } from '../stories/day3';
+import { DAY4 } from '../stories/day4';
+import { K as KK, KolamDefs, Floor as KFloor, Flour as KFlour } from '../styles/kolam/kit';
 import { Defs as MDefs, Paper as MPaper, PigmentVeil } from '../styles/madhubani/filters';
 import { MadhubaniBorder } from '../styles/madhubani/MadhubaniBorder';
 import { C as MC } from '../styles/madhubani/palette';
 
 // Format A · देवी कथा: one scene per VO line (scripts/fit_a.py -> a-timeline.json), in the day's own art form.
 type AT = { dur: number; lines: { id: string; text: string; at: number; dur: number }[]; scenes: Scene[] };
-type Story = { page: 'pahari' | 'sanjhi' | 'madhubani'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
-const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3 };
+type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
+const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4 };
 export const aTimeline = (d: number): AT | null => (atl as Record<string, AT>)[String(d)] ?? null;
 export const aFrames = (d: number) => Math.round((aTimeline(d)?.dur ?? 50) * FPS);
 export const hasStory = (d: number) => !!STORIES[d] && !!aTimeline(d);
@@ -34,11 +36,28 @@ export const FormatAFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
   const moral = idx >= st.moralFrom, moralLine = tl.lines[st.moralFrom];
   const cues: Cue[] = tl.lines.filter((_, k) => k < st.moralFrom).flatMap((l) => splitCues(l.text, l.at, l.at + l.dur));
   const title = idx === 0 ? Math.min(seg(u, 1.2, 2), 1 - seg(u, dur - .5, dur)) : 0;
+  const dark = st.page === 'kolam', ink = dark ? '#F6F1E6' : P.ink;
   const texts = <>
-    {title > 0 && <TitleCard title={d.story.titleHi} artLine={d.artForm.titleLineHi} series={SERIES(day)} a={title} />}
-    {moral && <TextZone id="moral" z={{ x: 90, y: 1600, w: 900, h: 230 }} opacity={seg(t, moralLine.at - .3, moralLine.at + .4)}><T size={d.story.moralHi.length > 44 ? 38 : 44} color={P.borderDeep} font={FONT.rozha}>{d.story.moralHi}</T></TextZone>}
-    {!moral && <Subtitles cues={cues} t={t} z={{ x: 90, y: 1600, w: 900, h: 230 }} color={P.ink} />}
+    {title > 0 && (dark
+      ? <TextZone id="title" z={{ x: 130, y: 150, w: 820, h: 330 }} opacity={title}><T size={96} color="#F6F1E6" font={FONT.rozha}>{d.story.titleHi}</T><T size={38} color="#F6F1E6" mt={8}>{d.artForm.titleLineHi}</T><T size={30} color="#F2C06A" mt={12}>{SERIES(day)}</T></TextZone>
+      : <TitleCard title={d.story.titleHi} artLine={d.artForm.titleLineHi} series={SERIES(day)} a={title} />)}
+    {moral && <TextZone id="moral" z={{ x: 90, y: 1600, w: 900, h: 230 }} opacity={seg(t, moralLine.at - .3, moralLine.at + .4)}><T size={d.story.moralHi.length > 44 ? 38 : 44} color={dark ? '#F2C06A' : P.borderDeep} font={FONT.rozha}>{d.story.moralHi}</T></TextZone>}
+    {!moral && <Subtitles cues={cues} t={t} z={{ x: 90, y: 1620, w: 900, h: 230 }} color={ink} />}
   </>;
+  if (st.page === 'kolam') {
+    const fade = idx > 0 && u < .6 ? ease(seg(u, 0, .6)) : 1;
+    return (
+      <AbsoluteFill style={{ background: KK.floorDeep }}>
+        <svg viewBox="0 0 1080 1920" width={1080} height={1920}>
+          <KolamDefs /><KFloor />
+          <g opacity={fade}><Scene t={t} u={u} dur={dur} /></g>
+          <rect x={60} y={1610} width={960} height={270} fill={KK.floorDeep} opacity={.6} />
+          <KFlour d="M70 1600 H1010" w={3} />
+        </svg>
+        {texts}
+      </AbsoluteFill>
+    );
+  }
   if (st.page === 'madhubani') {
     // brief: reuse the Madhubani engine (bharni double lines, motif border, line boil); text sits on a paper cartouche
     const f = Math.round(t * FPS), sl = idx > 0 && u < .6 ? ease(seg(u, 0, .6)) : 1;
