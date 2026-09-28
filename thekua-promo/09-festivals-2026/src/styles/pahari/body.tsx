@@ -141,6 +141,7 @@ export const LEGS: Record<string, LegPose> = {
   stride: { near: [[8, 280], [40, 462], [62, 640]], far: [[-14, 280], [-30, 466], [-66, 636]] },
   onefoot: { near: [[4, 280], [8, 468], [8, 646]], far: [[-12, 280], [60, 380], [2, 440]] },
   dig: { near: [[10, 280], [52, 440], [40, 640]], far: [[-14, 280], [-40, 460], [-70, 636]] },
+  seated: { near: [[8, 284], [104, 300], [100, 450]], far: [[-14, 284], [84, 306], [70, 452]] },
 };
 
 export type Garb = { dhoti: string; sash: string; uttariya: string; skin?: string; dhotiLen?: number; border?: string; hair?: string | null; garland?: boolean };
@@ -159,7 +160,14 @@ export const MaleBody: React.FC<{ arms: keyof typeof ARMS | { near: ArmPose; far
       </g>
       <Leg hip={Lg.near[0]} knee={Lg.near[1]} ankle={Lg.near[2]} skin={skin} />
       {/* dhoti: gathered at the waist, pleated front fold, ending mid-calf */}
-      {!bare && (
+      {!bare && legs === 'seated' && (
+        <g>
+          <S d="M-40 258 L34 258 C70 262 110 270 128 290 C136 320 132 360 128 404 L66 410 C70 380 72 346 70 330 C40 330 -10 330 -40 318 C-46 300 -46 276 -40 258Z" fill={garb.dhoti} sw={1.4} />
+          <S d="M66 410 L128 404" stroke={garb.border ?? P.gold} sw={6} />
+          {Array.from({ length: 4 }, (_, i) => <S key={i} d={`M${80 + i * 12} 300 C${84 + i * 12} 340 ${82 + i * 12} 370 ${80 + i * 12} 404`} stroke="#000" sw={1} op={.22} />)}
+        </g>
+      )}
+      {!bare && legs !== 'seated' && (
         <g>
           <S d={`M-36 262 L36 262 C44 320 ${Lg.near[1][0] + 30} 400 ${Lg.near[1][0] + 28} ${dl - 40} L${Lg.near[1][0] - 6} ${dl} C${(Lg.near[1][0] + Lg.far[1][0]) / 2} ${dl - 30} ${Lg.far[1][0] + 8} ${dl - 20} ${Lg.far[1][0] - 22} ${dl - 30} C-44 420 -44 330 -36 262Z`} fill={garb.dhoti} sw={1.4} />
           {Array.from({ length: 5 }, (_, i) => <S key={i} d={`M${14 + i * 4} 280 C${18 + i * 5} 360 ${Lg.near[1][0] + 4 + i * 5} 440 ${Lg.near[1][0] + i * 4} ${dl - 10}`} stroke="#000" sw={1} op={.22} />)}

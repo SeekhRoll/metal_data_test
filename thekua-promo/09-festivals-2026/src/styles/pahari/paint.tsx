@@ -7,10 +7,17 @@ export type Reveal = { line: number; fill: number; shimmer: number };
 export const RevealCtx = createContext<Reveal>({ line: 1, fill: 1, shimmer: -1 });
 export const useReveal = () => useContext(RevealCtx);
 
+// Line style of the art form: Pahari = fine even sepia line; Pattachitra = bold black line; etc.
+// Shapes drawn with the default outline colours are re-inked through this context.
+export type LineStyle = { scale: number; ink: string; skin: string; min?: number };
+export const LineCtx = createContext<LineStyle>({ scale: 1, ink: P.ink, skin: P.skinLine });
+
 type SP = { d: string; fill?: string; stroke?: string; sw?: number; op?: number; fillOp?: number; cap?: 'round' | 'butt'; id?: string; kind?: string };
 // one painted shape: flat opaque fill + fine even outline
 export const S: React.FC<SP> = ({ d, fill = 'none', stroke = P.ink, sw = 2, op = 1, fillOp = 1, cap = 'round', id, kind }) => {
-  const r = useReveal();
+  const r = useReveal(), ls = useContext(LineCtx);
+  if (stroke === P.ink) stroke = ls.ink; else if (stroke === P.skinLine) stroke = ls.skin;
+  sw = Math.max(ls.min ?? 0, sw * ls.scale);
   const hasLine = stroke !== 'none' && sw > 0;
   return (
     <g opacity={op} data-id={id} data-kind={kind}>
