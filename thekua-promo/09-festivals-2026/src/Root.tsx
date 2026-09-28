@@ -11,6 +11,7 @@ import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
 import { Ep3, Ep3Check, EP3_FRAMES } from './episodes/pitru/Ep3_Phalgu';
 import { SanjhiSift, SanjhiPortrait, SanjhiMonsoon } from './sheets/SanjhiSheets';
 import { KolamGrid, KolamCosmos, KolamDeviSheet } from './sheets/KolamSheets';
+import { MysoreStyle, MysorePortrait, MysoreTapas } from './sheets/MysoreSheets';
 import { BengalStyle, BengalPortrait, BengalScroll } from './sheets/BengalSheets';
 import { KeralaPortrait, KeralaTaraka, KeralaStyle } from './sheets/KeralaSheets';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
@@ -46,6 +47,9 @@ export const Root: React.FC = () => (
     {still('KolamGrid', KolamGrid)}
     {still('KolamCosmos', KolamCosmos)}
     {still('KolamDevi', KolamDeviSheet)}
+    {still('MysoreStyle', MysoreStyle)}
+    {still('MysorePortrait', MysorePortrait)}
+    {still('MysoreTapas', MysoreTapas)}
     {still('BengalStyle', BengalStyle)}
     {still('BengalPortrait', BengalPortrait)}
     {still('BengalScroll', BengalScroll)}
