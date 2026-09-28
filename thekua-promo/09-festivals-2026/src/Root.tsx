@@ -11,6 +11,7 @@ import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
 import { Ep3, Ep3Check, EP3_FRAMES } from './episodes/pitru/Ep3_Phalgu';
 import { SanjhiSift, SanjhiPortrait, SanjhiMonsoon } from './sheets/SanjhiSheets';
 import { KolamGrid, KolamCosmos, KolamDeviSheet } from './sheets/KolamSheets';
+import { KeralaPortrait, KeralaTaraka, KeralaStyle } from './sheets/KeralaSheets';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
 import { StyleSheet, Day1C, Day1CBrand, Day1BTitle, Day1ATitle, PitruEp1Title, PitruClosing, EndCard } from './sheets/GateStills';
 
@@ -44,6 +45,9 @@ export const Root: React.FC = () => (
     {still('KolamGrid', KolamGrid)}
     {still('KolamCosmos', KolamCosmos)}
     {still('KolamDevi', KolamDeviSheet)}
+    {still('KeralaStyle', KeralaStyle)}
+    {still('KeralaPortrait', KeralaPortrait)}
+    {still('KeralaTaraka', KeralaTaraka)}
     {still('PattaStyle', PattaStyle)}
     {still('PattaCourt', PattaCourt)}
     {still('PattaRealms', PattaRealms)}
