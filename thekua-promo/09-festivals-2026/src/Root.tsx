@@ -8,6 +8,7 @@ import { DeviSheet } from './sheets/DeviSheet';
 import { FormatC, FormatCCheck, C_DUR, FormatB, FormatBCheck, bFrames, bTimeline } from './formats/navratri';
 import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
 import { Ep3, Ep3Check, EP3_FRAMES } from './episodes/pitru/Ep3_Phalgu';
+import { SanjhiSift, SanjhiPortrait, SanjhiMonsoon } from './sheets/SanjhiSheets';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
 import { StyleSheet, Day1C, Day1CBrand, Day1BTitle, Day1ATitle, PitruEp1Title, PitruClosing, EndCard } from './sheets/GateStills';
 
@@ -33,6 +34,9 @@ export const Root: React.FC = () => (
     {still('ManjStyle', ManjStyle)}
     {still('ManjArrival', ManjArrival)}
     {still('ManjPinda', ManjPinda)}
+    {still('SanjhiSift', SanjhiSift)}
+    {still('SanjhiPortrait', SanjhiPortrait)}
+    {still('SanjhiMonsoon', SanjhiMonsoon)}
     {still('PattaStyle', PattaStyle)}
     {still('PattaCourt', PattaCourt)}
     {still('PattaRealms', PattaRealms)}
