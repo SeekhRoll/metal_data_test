@@ -7,10 +7,17 @@ export type Reveal = { line: number; fill: number; shimmer: number };
 export const RevealCtx = createContext<Reveal>({ line: 1, fill: 1, shimmer: -1 });
 export const useReveal = () => useContext(RevealCtx);
 
+// Line style of the art form: Pahari = fine even sepia line; Pattachitra = bold black line; etc.
+// Shapes drawn with the default outline colours are re-inked through this context.
+export type LineStyle = { scale: number; ink: string; skin: string; min?: number };
+export const LineCtx = createContext<LineStyle>({ scale: 1, ink: P.ink, skin: P.skinLine });
+
 type SP = { d: string; fill?: string; stroke?: string; sw?: number; op?: number; fillOp?: number; cap?: 'round' | 'butt'; id?: string; kind?: string };
 // one painted shape: flat opaque fill + fine even outline
 export const S: React.FC<SP> = ({ d, fill = 'none', stroke = P.ink, sw = 2, op = 1, fillOp = 1, cap = 'round', id, kind }) => {
-  const r = useReveal();
+  const r = useReveal(), ls = useContext(LineCtx);
+  if (stroke === P.ink) stroke = ls.ink; else if (stroke === P.skinLine) stroke = ls.skin;
+  sw = Math.max(ls.min ?? 0, sw * ls.scale);
   const hasLine = stroke !== 'none' && sw > 0;
   return (
     <g opacity={op} data-id={id} data-kind={kind}>
@@ -51,6 +58,8 @@ export const PahariDefs: React.FC<{ shimmer?: number }> = ({ shimmer = -1 }) => 
         <feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .32  0 0 0 0 .15  0 0 0 -2.2 1.25" />
       </filter>
       <filter id="haloBloom" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="18" /></filter>
+      {/* turns anything into a soft grey shadow (Indra's shadow, figures fading) */}
+      <filter id="silhouette" x="-10%" y="-10%" width="120%" height="120%"><feColorMatrix type="matrix" values="0 0 0 0 .16  0 0 0 0 .13  0 0 0 0 .14  0 0 0 .6 0" /></filter>
       <filter id="softBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" /></filter>
     </defs>
   );
