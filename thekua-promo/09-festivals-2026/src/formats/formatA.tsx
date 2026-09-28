@@ -16,6 +16,9 @@ import { DAY2 } from '../stories/day2';
 import { DAY3 } from '../stories/day3';
 import { DAY4 } from '../stories/day4';
 import { DAY5 } from '../stories/day5';
+import { DAY6 } from '../stories/day6';
+import { ScrollPage } from '../sheets/BengalSheets';
+import { FloralBand } from '../styles/bengalpat/kit';
 import { MuralPage } from '../sheets/KeralaSheets';
 import { DAY7, litFor } from '../stories/day7';
 import { StageSvg } from '../styles/shadow/Stage';
@@ -26,8 +29,8 @@ import { C as MC } from '../styles/madhubani/palette';
 
 // Format A · देवी कथा: one scene per VO line (scripts/fit_a.py -> a-timeline.json), in the day's own art form.
 type AT = { dur: number; lines: { id: string; text: string; at: number; dur: number }[]; scenes: Scene[] };
-type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam' | 'shadow' | 'kerala'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
-const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4, 5: DAY5, 7: DAY7 };
+type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam' | 'shadow' | 'kerala' | 'bengal'; panelOf?: number[]; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
+const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4, 5: DAY5, 6: DAY6, 7: DAY7 };
 export const aTimeline = (d: number): AT | null => (atl as Record<string, AT>)[String(d)] ?? null;
 export const aFrames = (d: number) => Math.round((aTimeline(d)?.dur ?? 50) * FPS);
 export const hasStory = (d: number) => !!STORIES[d] && !!aTimeline(d);
@@ -91,6 +94,16 @@ export const FormatAFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
         {texts}
       </AbsoluteFill>
     );
+  }
+  if (st.page === 'bengal') {
+    // the Patua scroll: panels stacked down the cloth; the camera travels down to each new panel as its scene begins
+    const PH = 1660, pan = st.panelOf ?? st.scenes.map((_, k) => k), p = pan[idx], pp = idx > 0 ? pan[idx - 1] : p;
+    const k = p !== pp && u < 1.1 ? ease(seg(u, 0, 1.1)) : 1, camY = (pp + (p - pp) * k) * PH;
+    const Prev = idx > 0 ? st.scenes[idx - 1] : null, pv = idx > 0 ? tl.scenes[idx - 1] : null;
+    return <ScrollPage overlay={texts}><g transform={`translate(0 ${-camY})`}>
+      {k < 1 && Prev && pv && <g transform={`translate(0 ${pp * PH})`}><Prev t={t} u={t - pv.from} dur={pv.to - pv.from} /><FloralBand y={1590} /></g>}
+      <g transform={`translate(0 ${p * PH})`}><Scene t={t} u={u} dur={dur} /><FloralBand y={1590} /><FloralBand y={-70} /></g>
+    </g></ScrollPage>;
   }
   if (st.page === 'kerala') {
     // the mural wall: foliage ground inside painted frame bands; scenes cross-fade like a lamp moving along the wall
