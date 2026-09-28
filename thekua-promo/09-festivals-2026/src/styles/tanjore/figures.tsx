@@ -59,6 +59,8 @@ const Standing: React.FC<{ shiva: boolean; t: number; blink: number }> = ({ shiv
   const sk = shiva ? 'url(#tjAsh)' : 'url(#tjSkin)';
   return <g>
     {/* upper arms: trishul (Shiva) / lotus (Shakti) */}
+    {shiva && <><Arm sp={[[90, -760, 36], [190, -800, 30], [200, -900, 26]]} skin={sk} /><g transform="translate(206 -950)"><P d="M-26 -34 H26 L4 0 L26 34 H-26 L-4 0Z" fill={TJ.redDeep} w={2.4} /><Foil d="M-28 -38 h56 v8 h-56Z M-28 30 h56 v8 h-56Z" /></g><Hand x={202} y={-906} skin={sk} s={.9} />
+      <Arm sp={[[106, -770, 36], [150, -670, 30], [140, -600, 26]]} skin={sk} /><Hand x={142} y={-588} skin={sk} rot={180} /></>}
     {shiva ? <><Arm sp={[[-90, -760, 36], [-190, -800, 30], [-200, -900, 26]]} skin={sk} /><Trishul x={-206} y={-940} s={.95} /><Hand x={-202} y={-906} skin={sk} s={.9} /></>
       : <><Arm sp={[[90, -760, 36], [190, -800, 30], [200, -900, 26]]} skin={sk} /><TLotus x={206} y={-960} s={1.1} /><Hand x={202} y={-906} skin={sk} s={.9} /></>}
     {/* legs */}
