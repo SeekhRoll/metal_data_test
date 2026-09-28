@@ -114,8 +114,8 @@ const Tapasya: React.FC<{ t: number; u: number }> = ({ t, u }) => {
       <Rain t={t} a={rain} x={W.x} y={W.y} w={W.w} h={W.h} />
       <Snow t={t} a={snow} x={W.x} y={W.y} w={W.w} h={W.h} />
       {u > 6 && <RoundTree x={W.x + 80} y={1260} h={300} seed={9} flowers="#E0747F" />}
-      <g transform={`translate(420 ${GROUND - 646 * .82}) scale(.82)`}><Bhagiratha pose="tapas" blink={blinkAt(t, 5) * (u < 6 ? 1 : 0)} breathe={Math.sin(t * .9)} /></g>
-      {bloom > 0 && <g opacity={bloom} transform={`translate(780 ${520 - 20 * ease(bloom)}) scale(.46)`}><Halo x={-30} y={-50} r={180} bloom={bloom} /><Brahma blink={blinkAt(t, 6)} /></g>}
+      <g transform={`translate(330 ${GROUND - 646 * .82}) scale(.82)`}><Bhagiratha pose="tapas" blink={blinkAt(t, 5) * (u < 6 ? 1 : 0)} breathe={Math.sin(t * .9)} /></g>
+      {bloom > 0 && <g opacity={bloom} transform={`translate(760 ${470 - 20 * ease(bloom)}) scale(.72)`}><Halo x={-30} y={-50} r={180} bloom={bloom} /><Brahma blink={blinkAt(t, 6)} /></g>}
     </g>
   );
 };
@@ -147,7 +147,7 @@ const Liberation: React.FC<{ t: number; u: number }> = ({ t, u }) => {
       <rect x={W.x} y={1250} width={WIDE} height={400} fill={P.ground} />
       <River x={W.x} y={1250} w={Math.max(0, cx - 120 - W.x)} h={70} t={t} id="ganga-river" />
       <AshMound x={1780} y={1260} a={1 - seg(u, 8, 9.5) * .7} />
-      <g transform={`translate(${cx} ${1240 - 150 * .6}) scale(.6)`}><BhagirathaChariot t={onTwos(t)} /></g>
+      <g transform={`translate(${cx} ${1250 - 150 * .85}) scale(.85)`}><BhagirathaChariot t={onTwos(t)} /></g>
       {lights > 0 && <Motes n={260} x={1620} y={1220} w={320} t={lights} rise={170} seed={21} />}
       {[300, 900, 1500].map((x, i) => <RoundTree key={i} x={x} y={1260} h={260} seed={30 + i} sway={Math.sin(t * .7 + i)} />)}
     </g>
