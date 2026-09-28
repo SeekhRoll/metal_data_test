@@ -10,6 +10,7 @@ import { FormatC, FormatCCheck, C_DUR, FormatB, FormatBCheck, bFrames, bTimeline
 import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
 import { Ep3, Ep3Check, EP3_FRAMES } from './episodes/pitru/Ep3_Phalgu';
 import { SanjhiSift, SanjhiPortrait, SanjhiMonsoon } from './sheets/SanjhiSheets';
+import { KolamGrid, KolamCosmos, KolamDeviSheet } from './sheets/KolamSheets';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
 import { StyleSheet, Day1C, Day1CBrand, Day1BTitle, Day1ATitle, PitruEp1Title, PitruClosing, EndCard } from './sheets/GateStills';
 
@@ -40,6 +41,9 @@ export const Root: React.FC = () => (
     {still('SanjhiSift', SanjhiSift)}
     {still('SanjhiPortrait', SanjhiPortrait)}
     {still('SanjhiMonsoon', SanjhiMonsoon)}
+    {still('KolamGrid', KolamGrid)}
+    {still('KolamCosmos', KolamCosmos)}
+    {still('KolamDevi', KolamDeviSheet)}
     {still('PattaStyle', PattaStyle)}
     {still('PattaCourt', PattaCourt)}
     {still('PattaRealms', PattaRealms)}
