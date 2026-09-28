@@ -15,6 +15,8 @@ import { DAY1 } from '../stories/day1';
 import { DAY2 } from '../stories/day2';
 import { DAY3 } from '../stories/day3';
 import { DAY4 } from '../stories/day4';
+import { DAY5 } from '../stories/day5';
+import { MuralPage } from '../sheets/KeralaSheets';
 import { DAY7, litFor } from '../stories/day7';
 import { StageSvg } from '../styles/shadow/Stage';
 import { K as KK, KolamDefs, Floor as KFloor, Flour as KFlour } from '../styles/kolam/kit';
@@ -24,8 +26,8 @@ import { C as MC } from '../styles/madhubani/palette';
 
 // Format A · देवी कथा: one scene per VO line (scripts/fit_a.py -> a-timeline.json), in the day's own art form.
 type AT = { dur: number; lines: { id: string; text: string; at: number; dur: number }[]; scenes: Scene[] };
-type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam' | 'shadow'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
-const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4, 7: DAY7 };
+type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam' | 'shadow' | 'kerala'; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
+const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4, 5: DAY5, 7: DAY7 };
 export const aTimeline = (d: number): AT | null => (atl as Record<string, AT>)[String(d)] ?? null;
 export const aFrames = (d: number) => Math.round((aTimeline(d)?.dur ?? 50) * FPS);
 export const hasStory = (d: number) => !!STORIES[d] && !!aTimeline(d);
@@ -89,6 +91,12 @@ export const FormatAFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
         {texts}
       </AbsoluteFill>
     );
+  }
+  if (st.page === 'kerala') {
+    // the mural wall: foliage ground inside painted frame bands; scenes cross-fade like a lamp moving along the wall
+    const fade = idx > 0 && u < .6 ? ease(seg(u, 0, .6)) : 1;
+    const Prev = idx > 0 ? st.scenes[idx - 1] : null, pv = idx > 0 ? tl.scenes[idx - 1] : null;
+    return <MuralPage overlay={texts}>{fade < 1 && Prev && pv && <Prev t={t} u={t - pv.from} dur={pv.to - pv.from} />}<g opacity={fade}><Scene t={t} u={u} dur={dur} /></g></MuralPage>;
   }
   if (st.page === 'sanjhi') {
     return (
