@@ -10,7 +10,7 @@ import type { Item } from '../../styles/pahari/attributes';
 
 // The nine Pahari Devi portraits for Formats B and C. Each entry exports the attributes it draws, and
 // tests/iconography.test (scripts/check_iconography.mjs) asserts them against data/navratri-days.json (brief §6.2, §9.2).
-export type DeviEntry = { day: number; arms: number; vahana: string; holds: string[]; features: string[]; draw: React.FC<{ hex: string; life: Life }> };
+export type DeviEntry = { day: number; arms: number; vahana: string; holds: string[]; features: string[]; draw: React.FC<{ hex: string; life: Life }>; place?: { x: number; y: number; s: number } };
 
 // six-faced baby Skanda (three faces visible) on the Devi's lap
 const BabySkanda: React.FC = () => (
@@ -47,7 +47,7 @@ export const DEVIS: DeviEntry[] = [
   { day: 1, arms: 2, vahana: 'bull (Nandi)', holds: ['trishul (right)', 'lotus (left)'], features: ['crescent moon on forehead'],
     draw: ({ hex, life }) => <Shailaputri garment={hex} life={life} /> },
   { day: 2, arms: 2, vahana: 'walks barefoot', holds: ['japa mala', 'kamandalu'], features: ['white attire', 'serene'],
-    draw: make({ posture: 'walking', white: true, veil: '#F4EFE3', crown: false, ...items(['mala'], ['kamandalu']) }, null) },
+    draw: make({ posture: 'walking', white: true, veil: '#F4EFE3', crown: false, ...items(['mala'], ['kamandalu']) }, null), place: { x: 530, y: 690, s: 1.16 } },
   { day: 3, arms: 10, vahana: 'tiger', holds: ['trishul', 'gada', 'sword', 'kamandalu', 'lotus', 'arrow', 'bow', 'japa mala', 'abhaya mudra', 'varada mudra'], features: ['bell-shaped half-moon on forehead', 'golden'],
     draw: make({ posture: 'saddle', bell: true, skin: '#EDBE6E', ...items(['abhaya', 'gada', 'sword', 'trishul', 'arrow'], ['varada', 'kamandalu', 'mala', 'bow', 'lotus']) }, 'tiger') },
   { day: 4, arms: 8, vahana: 'lion', holds: ['kamandalu', 'bow', 'arrow', 'lotus', 'amrit kalash', 'chakra', 'gada', 'japa mala'], features: ['radiant like the sun'],
@@ -58,7 +58,7 @@ export const DEVIS: DeviEntry[] = [
       <g transform="translate(-60 250) scale(.8)"><Lion tail={Math.sin(life.t)} blink={life.blink} /></g>
       <g transform="translate(20 330)"><LotusSeat w={320} /></g>
       <DeviFigure life={life} spec={{ posture: 'padmasana', garment: hex, veil: P.pink, near: ['abhaya', 'lotus'], far: ['lotus', 'none'], lap: <BabySkanda /> }} />
-    </g> },
+    </g>, place: { x: 520, y: 760, s: 1.42 } },
   { day: 6, arms: 4, vahana: 'lion', holds: ['sword', 'lotus', 'abhaya mudra', 'varada mudra'], features: ['warrior radiance'],
     draw: make({ posture: 'saddle', ...items(['abhaya', 'sword'], ['varada', 'lotus']) }, 'lion') },
   { day: 7, arms: 4, vahana: 'donkey', holds: ['sickle-sword', 'vajra', 'abhaya mudra', 'varada mudra'], features: ['dark complexion', 'loose hair', 'three eyes', 'lightning-bright necklace'],
@@ -70,6 +70,6 @@ export const DEVIS: DeviEntry[] = [
     draw: ({ hex, life }) => <g>
       <g transform="translate(20 330)"><LotusSeat w={320} /></g>
       <DeviFigure life={life} spec={{ posture: 'padmasana', garment: hex, veil: P.pink, near: ['chakra', 'gada'], far: ['shankh', 'lotus'] }} />
-    </g> },
+    </g>, place: { x: 520, y: 760, s: 1.42 } },
 ];
 export const deviFor = (day: number) => DEVIS[day - 1];

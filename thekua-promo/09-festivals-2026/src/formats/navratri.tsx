@@ -1,0 +1,89 @@
+import React from 'react';
+import { AbsoluteFill, useCurrentFrame } from 'remotion';
+import { P, PAGE, shade } from '../styles/pahari/palette';
+import { PahariPage } from '../styles/pahari/Page';
+import { seg, ease, easeBack } from '../styles/pahari/rand';
+import { Landscape, Petals } from '../devi/pahari/PortraitScene';
+import { Diya } from '../styles/pahari/scenery';
+import { deviFor } from '../devi/pahari/devis';
+import { TitleCard } from '../shared/TitleCard';
+import { BrandStrip } from '../shared/EndCardFull';
+import { TextZone, T } from '../shared/text';
+import { FONT } from '../style/fonts';
+import { FPS, reveal, blinkAt, Subtitles, Cue, makeCheck, Scene } from '../shared/film';
+import days from '../../data/navratri-days.json';
+
+export const PAHARI_LINE = 'पहाड़ी लघुचित्र शैली में · हिमाचल प्रदेश';
+type Day = (typeof days)[number];
+const life = (t: number, day: number, bloom = .4) => ({ t, blink: blinkAt(t, day), breathe: Math.sin(t * 1.4), sway: Math.sin(t * .9) * .6, bloom });
+
+// the day's portrait: Pahari landscape + Devi, slow push-in
+const Portrait: React.FC<{ d: Day; t: number; dy?: number; push?: number; bloom?: number }> = ({ d, t, dy = 90, push = 0, bloom = .4 }) => {
+  const e = deviFor(d.day), D = e.draw, pl = e.place ?? { x: 500, y: 720 + dy, s: 1.28 };
+  return (
+    <g transform={`translate(540 1000) scale(${1 + push * .06}) translate(-540 -1000)`}>
+      <Landscape t={t} />
+      <g transform={`translate(${pl.x} ${pl.y}) scale(${pl.s})`}><D hex={d.colour.hex} life={life(t, d.day, bloom)} /></g>
+    </g>
+  );
+};
+
+// ---------------------------------------------------------------- Format C · शुभकामना (13 s)
+export const C_DUR = 13;
+export const C_SCENES: Scene[] = [{ id: 'diya', from: 0, to: 3 }, { id: 'portrait', from: 3, to: 10 }, { id: 'brand', from: 10, to: C_DUR }];
+export const FormatCFrame: React.FC<{ t: number; day: number }> = ({ t, day }) => {
+  const d = days[day - 1], hex = d.colour.hex;
+  const lit = seg(t, .5, 1.6), rv = reveal(Math.max(0, t - 2.4), 1.1), show = seg(t, 2.6, 3.2);
+  const text = seg(t, 4.4, 5.4), brand = seg(t, 10, 10.8);
+  return (
+    <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer}
+      painting={<>
+        <g opacity={show}><Portrait d={d} t={t} push={seg(t, 3, 13)} bloom={.35 + .3 * Math.sin(Math.PI * seg(t, 3, 6))} /></g>
+        <g opacity={1 - show * .0}><Diya x={show > 0 ? 880 : 540} y={show > 0 ? 1470 : 900} s={show > 0 ? .9 : 2.2} flame={t} glow={lit} /></g>
+        {t > 3.2 && <Petals t={t - 3.2} n={22} from={0} />}
+      </>}
+      overlay={<>
+        <TextZone id="greet" z={{ x: 110, y: 300, w: 860, h: 170 }} opacity={text * (1 - brand)}><T size={112} color={P.border} font={FONT.rozha}>शुभ नवरात्रि</T></TextZone>
+        <TextZone id="c-lines" z={{ x: 90, y: 1592, w: 900, h: 248 }} opacity={text * (1 - brand)}>
+          <T size={46} color={P.ink} font={FONT.rozha}>{d.dayNameHi} · {d.devi.nameHi}</T>
+          <T size={42} color={shade(hex === '#F2EFE6' ? '#8A7A5A' : hex, -.35)} mt={6}>{d.mantra}</T>
+          <T size={24} color={P.goldDeep} mt={10}>{PAHARI_LINE}</T>
+        </TextZone>
+        {brand > 0 && <BrandStrip a={brand} />}
+      </>} />
+  );
+};
+
+// ---------------------------------------------------------------- Format B · आज की देवी (≈25 s; the full end card is appended later)
+export const B_DUR = 25;
+export const B_SCENES: Scene[] = [{ id: 'title', from: 0, to: 4 }, { id: 'attributes', from: 4, to: 18 }, { id: 'colour', from: 18, to: 23 }, { id: 'mantra', from: 23, to: B_DUR }];
+const CALLOUT_Z = { x: 150, y: 120, w: 780, h: 150 };
+export const FormatBFrame: React.FC<{ t: number; day: number; cues: Cue[] }> = ({ t, day, cues }) => {
+  const d = days[day - 1], hex = d.colour.hex, rv = reveal(t, 1.2);
+  const title = Math.min(seg(t, .6, 1.4), 1 - seg(t, 3.4, 4));
+  const k = t >= 4 && t < 18 ? Math.min(d.calloutsHi.length - 1, Math.floor((t - 4) / 3.5)) : -1, ku = (t - 4) - k * 3.5;
+  const cA = k >= 0 ? Math.min(easeBack(seg(ku, 0, .5)), 1 - seg(ku, 3.1, 3.5)) : 0;
+  const col = t >= 18 && t < 23 ? Math.min(seg(t, 18, 18.6), 1 - seg(t, 22.6, 23)) : 0, mantra = seg(t, 23, 23.6);
+  return (
+    <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer}
+      painting={<><Portrait d={d} t={t} push={seg(t, 0, 25)} /><Petals t={t} n={12} /></>}
+      overlay={<>
+        {title > 0 && <TitleCard title={d.devi.nameHi} artLine={PAHARI_LINE} series={`नवरात्रि · ${d.dayNameHi}`} a={title} z={{ x: 130, y: 110, w: 820, h: 300 }} />}
+        {k >= 0 && <>
+          <div data-kind="surface" style={{ position: 'absolute', left: CALLOUT_Z.x + 110, top: CALLOUT_Z.y + 20, width: CALLOUT_Z.w - 220, height: CALLOUT_Z.h - 40, background: P.hartal, border: `2px solid ${P.ink}`, boxShadow: `inset 0 0 0 5px ${P.hartal}, inset 0 0 0 7px ${hex}`, opacity: cA, transform: `scale(${.9 + .1 * cA})` }} />
+          <TextZone id="callout" z={CALLOUT_Z} opacity={cA}><T size={50} color={P.ink} font={FONT.rozha}>{d.calloutsHi[k]}</T></TextZone>
+        </>}
+        {col > 0 && <>
+          <div data-kind="surface" style={{ position: 'absolute', left: 170, top: 120, width: 740, height: 330, background: P.hartal, border: `2px solid ${P.ink}`, opacity: col }} />
+          <div data-kind="surface" style={{ position: 'absolute', left: 210, top: 170, width: 120, height: 120, borderRadius: 60, background: hex, border: `3px solid ${P.ink}`, opacity: col }} />
+          <TextZone id="colour" z={{ x: 350, y: 140, w: 540, h: 170 }} opacity={col}><T size={36} color={P.ink}>आज का रंग</T><T size={60} color={shade(hex === '#F2EFE6' ? '#8A7A5A' : hex, -.3)} font={FONT.rozha}>{d.colour.nameHi}</T></TextZone>
+          <TextZone id="bhog" z={{ x: 190, y: 320, w: 700, h: 110 }} opacity={col}><T size={40} color={P.ink}>भोग · {d.bhogHi}</T></TextZone>
+        </>}
+        {mantra > 0 && <TextZone id="mantra" z={{ x: 110, y: 150, w: 860, h: 260 }} opacity={mantra}><T size={34} color={P.ink}>मंत्र</T><T size={62} color={P.border} font={FONT.rozha}>{d.mantra}</T></TextZone>}
+        <Subtitles cues={cues} t={t} z={{ x: 90, y: 1600, w: 900, h: 230 }} color={P.ink} />
+      </>} />
+  );
+};
+
+export const FormatC: React.FC<{ day: number }> = ({ day }) => { const f = useCurrentFrame(); return <FormatCFrame t={f / FPS} day={day} />; };
+export const FormatCCheck: React.FC<{ day: number }> = ({ day }) => { const C = makeCheck(({ t }) => <FormatCFrame t={t} day={day} />, C_SCENES); return <C />; };
