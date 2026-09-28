@@ -90,4 +90,5 @@ export const FormatBFrame: React.FC<{ t: number; day: number; cues: Cue[] }> = (
 };
 
 export const FormatC: React.FC<{ day: number }> = ({ day }) => { const f = useCurrentFrame(); return <FormatCFrame t={f / FPS} day={day} />; };
-export const FormatCCheck: React.FC<{ day: number }> = ({ day }) => { const C = makeCheck(({ t }) => <FormatCFrame t={t} day={day} />, C_SCENES); return <C />; };
+const CHECK_C = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => makeCheck(({ t }) => <FormatCFrame t={t} day={d} />, C_SCENES, { x0: PAGE.win.x, y0: PAGE.win.y, x1: PAGE.win.x + PAGE.win.w, y1: PAGE.win.y + PAGE.win.h }));
+export const FormatCCheck: React.FC<{ day: number }> = ({ day }) => { const C = CHECK_C[day - 1]; return <C />; };
