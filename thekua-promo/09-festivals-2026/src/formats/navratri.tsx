@@ -5,6 +5,7 @@ import { PahariPage } from '../styles/pahari/Page';
 import { seg, ease, easeBack } from '../styles/pahari/rand';
 import { Landscape, Petals } from '../devi/pahari/PortraitScene';
 import { Diya } from '../styles/pahari/scenery';
+import { RevealCtx } from '../styles/pahari/paint';
 import { deviFor } from '../devi/pahari/devis';
 import { TitleCard } from '../shared/TitleCard';
 import { BrandStrip } from '../shared/EndCardFull';
@@ -28,6 +29,9 @@ const Portrait: React.FC<{ d: Day; t: number; dy?: number; push?: number; bloom?
   );
 };
 
+// the page tinted with a light wash of the day's colour (brief: border and background in the day's accent)
+const wash = (hex: string) => { const n = parseInt(hex.slice(1), 16), P0 = [241, 231, 207], c = [n >> 16, (n >> 8) & 255, n & 255]; return '#' + P0.map((p, i) => Math.round(p + (c[i] - p) * .16).toString(16).padStart(2, '0')).join(''); };
+
 // ---------------------------------------------------------------- Format C · शुभकामना (13 s)
 export const C_DUR = 13;
 export const C_SCENES: Scene[] = [{ id: 'diya', from: 0, to: 3 }, { id: 'portrait', from: 3, to: 10 }, { id: 'brand', from: 10, to: C_DUR }];
@@ -36,10 +40,10 @@ export const FormatCFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
   const lit = seg(t, .5, 1.6), rv = reveal(Math.max(0, t - 2.4), 1.1), show = seg(t, 2.6, 3.2);
   const text = seg(t, 4.4, 5.4), brand = seg(t, 10, 10.8);
   return (
-    <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer}
+    <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer} windowFill={wash(hex)}
       painting={<>
         <g opacity={show}><Portrait d={d} t={t} push={seg(t, 3, 13)} bloom={.35 + .3 * Math.sin(Math.PI * seg(t, 3, 6))} /></g>
-        <g opacity={1 - show * .0}><Diya x={show > 0 ? 880 : 540} y={show > 0 ? 1470 : 900} s={show > 0 ? .9 : 2.2} flame={t} glow={lit} /></g>
+        <RevealCtx.Provider value={{ line: 1, fill: 1, shimmer: -1 }}><Diya x={show > 0 ? 880 : 540} y={show > 0 ? 1470 : 900} s={show > 0 ? .9 : 2.2} flame={t} glow={lit} /></RevealCtx.Provider>
         {t > 3.2 && <Petals t={t - 3.2} n={22} from={0} />}
       </>}
       overlay={<>
