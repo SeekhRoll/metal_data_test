@@ -62,7 +62,7 @@
 - **Visual:** the scene fades to near-dark, leaving a single brass diya with a steady flame at the centre, **drawn in that episode's art form**.
 - **Text (two lines, in a reserved text zone):**
   - पितरों को नमन।
-  - Shri Desi Thekua की ओर से
+  - Sri Desi Thekua की ओर से
 - **Audio:** tanpura only, with no VO (or an optional soft VO: "पितरों को नमन।").
 - **Nothing else:** no products, prices or contact details.
 
