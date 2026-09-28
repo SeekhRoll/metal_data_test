@@ -12,10 +12,18 @@ export const useReveal = () => useContext(RevealCtx);
 export type LineStyle = { scale: number; ink: string; skin: string; min?: number };
 export const LineCtx = createContext<LineStyle>({ scale: 1, ink: P.ink, skin: P.skinLine });
 
+// Sanjhi stencil mode: inside a stencil mask every outline becomes a cut line (black) and every filled area a lace
+// perforation pattern chosen from its colour, so the same drawings can be cut out of paper.
+export const StencilCtx = createContext<null | { lace: (fill: string) => string; cut: number }>(null);
+
 type SP = { d: string; fill?: string; stroke?: string; sw?: number; op?: number; fillOp?: number; cap?: 'round' | 'butt'; id?: string; kind?: string };
 // one painted shape: flat opaque fill + fine even outline
 export const S: React.FC<SP> = ({ d, fill = 'none', stroke = P.ink, sw = 2, op = 1, fillOp = 1, cap = 'round', id, kind }) => {
-  const r = useReveal(), ls = useContext(LineCtx);
+  const r = useReveal(), ls = useContext(LineCtx), st = useContext(StencilCtx);
+  if (st) {
+    const f = fill === 'none' ? 'none' : st.lace(fill);
+    return <g data-id={id} data-kind={kind}>{f !== 'none' && <path d={d} fill={f} />}{stroke !== 'none' && sw > 0 && <path d={d} fill="none" stroke="#000" strokeWidth={Math.max(st.cut, sw * .9)} strokeLinecap="round" strokeLinejoin="round" />}</g>;
+  }
   if (stroke === P.ink) stroke = ls.ink; else if (stroke === P.skinLine) stroke = ls.skin;
   sw = Math.max(ls.min ?? 0, sw * ls.scale);
   const hasLine = stroke !== 'none' && sw > 0;

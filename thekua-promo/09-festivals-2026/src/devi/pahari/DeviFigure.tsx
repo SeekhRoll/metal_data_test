@@ -14,6 +14,8 @@ export type Posture = 'saddle' | 'padmasana' | 'walking';
 // item upright. `near` / `far` list the items from the lowest arm to the highest.
 function fan(side: 'near' | 'far', items: Item[], life: Life) {
   const sh: Pt = side === 'near' ? [4, 108] : [-10, 108], n = items.length;
+  // hands resting in the lap (meditation)
+  if (items[0] === 'dhyana') return [{ sh, el: [side === 'near' ? 20 : 4, 214] as Pt, wr: [side === 'near' ? 60 : 50, 270] as Pt, it: 'dhyana' as Item, hand: 'open' as const, i: 0 }];
   // angle range (degrees, 0 = pointing right, 90 = down): near arms fan forward, far arms fan back
   const [a0, a1] = side === 'near' ? (n > 1 ? [70, -60] : [60, 60]) : (n > 1 ? [110, 230] : [100, 100]);
   return items.map((it, i) => {
@@ -32,6 +34,7 @@ export type DeviSpec = {
   near: Item[]; far: Item[];
   crescent?: boolean; bell?: boolean; thirdEye?: boolean; looseHair?: boolean; crown?: boolean; white?: boolean;
   lap?: React.ReactNode;              // e.g. baby Skanda
+  halo?: boolean;                      // false for mortal scenes
 };
 
 export const DeviFigure: React.FC<{ spec: DeviSpec; life: Life }> = ({ spec, life }) => {
@@ -41,13 +44,13 @@ export const DeviFigure: React.FC<{ spec: DeviSpec; life: Life }> = ({ spec, lif
   const armEl = (a: ReturnType<typeof fan>[number], k: string, w = 1) => (
     <g key={k}>
       <Arm sh={a.sh} el={a.el} wr={a.wr} hand={a.hand} skin={skin} w={w * .92} />
-      {a.it !== 'abhaya' && a.it !== 'varada' && a.it !== 'none' && <g transform={`translate(${a.wr[0] + 4} ${a.wr[1]})`}><Held item={a.it} s={.62} /></g>}
+      {a.it !== 'abhaya' && a.it !== 'varada' && a.it !== 'none' && a.it !== 'dhyana' && <g transform={`translate(${a.wr[0] + 4} ${a.wr[1]})`}><Held item={a.it} s={.62} /></g>}
     </g>
   );
   const seated = spec.posture !== 'walking';
   return (
     <g data-id="devi" data-kind="graphic">
-      <Halo x={2} y={-10} r={84} bloom={life.bloom} id="halo" />
+      {spec.halo !== false && <Halo x={2} y={-10} r={84} bloom={life.bloom} id="halo" />}
       {spec.looseHair
         ? <S d="M-40 -40 C-90 20 -110 140 -96 280 C-70 250 -60 200 -44 160 C-40 110 -30 60 -20 20Z" fill={P.hair} sw={1} />
         : <><S d="M-36 20 C-44 60 -46 120 -44 190 L-32 190 C-32 120 -28 60 -24 26Z" fill={P.hair} sw={1} /><Gold d="M-44 190 h12 l2 26 h-16z" sw={.8} /></>}

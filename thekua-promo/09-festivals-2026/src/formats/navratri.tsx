@@ -13,6 +13,8 @@ import { TextZone, T } from '../shared/text';
 import { FONT } from '../style/fonts';
 import { FPS, reveal, blinkAt, Subtitles, Cue, makeCheck, Scene } from '../shared/film';
 import days from '../../data/navratri-days.json';
+import btl from './b-timeline.json';
+import { splitCues as split } from '../shared/film';
 
 export const PAHARI_LINE = 'पहाड़ी लघुचित्र शैली में · हिमाचल प्रदेश';
 type Day = (typeof days)[number];
@@ -59,19 +61,25 @@ export const FormatCFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
   );
 };
 
-// ---------------------------------------------------------------- Format B · आज की देवी (≈25 s; the full end card is appended later)
-export const B_DUR = 25;
-export const B_SCENES: Scene[] = [{ id: 'title', from: 0, to: 4 }, { id: 'attributes', from: 4, to: 18 }, { id: 'colour', from: 18, to: 23 }, { id: 'mantra', from: 23, to: B_DUR }];
+// ---------------------------------------------------------------- Format B · आज की देवी (≈20–24 s; the full end card is appended later)
+// Sections follow the recorded lines (scripts/fit_b.py -> b-timeline.json): title / attributes / colour + bhog / mantra.
+type BT = { dur: number; lines: { id: string; text: string; at: number; dur: number }[]; scenes: Scene[] };
+export const bTimeline = (day: number): BT | null => (btl as Record<string, BT>)[String(day)] ?? null;
+export const bFrames = (day: number) => Math.round((bTimeline(day)?.dur ?? 25) * FPS);
 const CALLOUT_Z = { x: 150, y: 120, w: 780, h: 150 };
-export const FormatBFrame: React.FC<{ t: number; day: number; cues: Cue[] }> = ({ t, day, cues }) => {
-  const d = days[day - 1], hex = d.colour.hex, rv = reveal(t, 1.2);
-  const title = Math.min(seg(t, .6, 1.4), 1 - seg(t, 3.4, 4));
-  const k = t >= 4 && t < 18 ? Math.min(d.calloutsHi.length - 1, Math.floor((t - 4) / 3.5)) : -1, ku = (t - 4) - k * 3.5;
-  const cA = k >= 0 ? Math.min(easeBack(seg(ku, 0, .5)), 1 - seg(ku, 3.1, 3.5)) : 0;
-  const col = t >= 18 && t < 23 ? Math.min(seg(t, 18, 18.6), 1 - seg(t, 22.6, 23)) : 0, mantra = seg(t, 23, 23.6);
+export const FormatBFrame: React.FC<{ t: number; day: number }> = ({ t, day }) => {
+  const d = days[day - 1], hex = d.colour.hex, rv = reveal(t, 1.2), tl = bTimeline(day)!;
+  const sc = (id: string) => tl.scenes.find((x) => x.id === id)!;
+  const T0 = sc('title'), A = sc('attributes'), C = sc('colour'), MN = sc('mantra');
+  const cues: Cue[] = tl.lines.filter((l) => !l.text.startsWith('मंत्र')).flatMap((l) => split(l.text, l.at, l.at + l.dur));
+  const title = Math.min(seg(t, .5, 1.2), 1 - seg(t, T0.to - .4, T0.to));
+  const per = (A.to - A.from) / d.calloutsHi.length;
+  const k = t >= A.from && t < A.to ? Math.min(d.calloutsHi.length - 1, Math.floor((t - A.from) / per)) : -1, ku = t - A.from - k * per;
+  const cA = k >= 0 ? Math.min(easeBack(seg(ku, 0, .45)), 1 - seg(ku, per - .35, per)) : 0;
+  const col = t >= C.from && t < C.to ? Math.min(seg(t, C.from, C.from + .5), 1 - seg(t, C.to - .35, C.to)) : 0, mantra = seg(t, MN.from, MN.from + .5);
   return (
     <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer}
-      painting={<><Portrait d={d} t={t} push={seg(t, 0, 25)} /><Petals t={t} n={12} avoid={[{ x: 110, y: 100, w: 860, h: 360 }]} /></>}
+      painting={<><Portrait d={d} t={t} push={seg(t, 0, tl.dur)} /><Petals t={t} n={12} avoid={[{ x: 110, y: 100, w: 860, h: 360 }]} /></>}
       overlay={<>
         {title > 0 && <TitleCard title={d.devi.nameHi} artLine={PAHARI_LINE} series={`नवरात्रि · ${d.dayNameHi}`} a={title} z={{ x: 130, y: 110, w: 820, h: 300 }} />}
         {k >= 0 && <>
@@ -82,13 +90,16 @@ export const FormatBFrame: React.FC<{ t: number; day: number; cues: Cue[] }> = (
           <div data-kind="surface" style={{ position: 'absolute', left: 170, top: 120, width: 740, height: 330, background: P.hartal, border: `2px solid ${P.ink}`, opacity: col }} />
           <div data-kind="surface" style={{ position: 'absolute', left: 210, top: 170, width: 120, height: 120, borderRadius: 60, background: hex, border: `3px solid ${P.ink}`, opacity: col }} />
           <TextZone id="colour" z={{ x: 350, y: 140, w: 540, h: 170 }} opacity={col}><T size={36} color={P.ink}>आज का रंग</T><T size={60} color={shade(hex === '#F2EFE6' ? '#8A7A5A' : hex, -.3)} font={FONT.rozha}>{d.colour.nameHi}</T></TextZone>
-          <TextZone id="bhog" z={{ x: 190, y: 320, w: 700, h: 110 }} opacity={col}><T size={40} color={P.ink}>भोग · {d.bhogHi}</T></TextZone>
+          <TextZone id="bhog" z={{ x: 190, y: 320, w: 700, h: 110 }} opacity={col}><T size={d.bhogHi.length > 20 ? 30 : 40} color={P.ink}>भोग · {d.bhogHi}</T></TextZone>
         </>}
         {mantra > 0 && <TextZone id="mantra" z={{ x: 110, y: 150, w: 860, h: 260 }} opacity={mantra}><T size={34} color={P.ink}>मंत्र</T><T size={62} color={P.border} font={FONT.rozha}>{d.mantra}</T></TextZone>}
         <Subtitles cues={cues} t={t} z={{ x: 90, y: 1600, w: 900, h: 230 }} color={P.ink} />
       </>} />
   );
 };
+export const FormatB: React.FC<{ day: number }> = ({ day }) => { const f = useCurrentFrame(); return <FormatBFrame t={f / FPS} day={day} />; };
+const CHECK_B = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => makeCheck(({ t }) => <FormatBFrame t={t} day={d} />, [], { x0: PAGE.win.x, y0: PAGE.win.y, x1: PAGE.win.x + PAGE.win.w, y1: PAGE.win.y + PAGE.win.h }));
+export const FormatBCheck: React.FC<{ day: number }> = ({ day }) => { const C = CHECK_B[day - 1]; return <C />; };
 
 export const FormatC: React.FC<{ day: number }> = ({ day }) => { const f = useCurrentFrame(); return <FormatCFrame t={f / FPS} day={day} />; };
 const CHECK_C = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => makeCheck(({ t }) => <FormatCFrame t={t} day={d} />, C_SCENES, { x0: PAGE.win.x, y0: PAGE.win.y, x1: PAGE.win.x + PAGE.win.w, y1: PAGE.win.y + PAGE.win.h }));

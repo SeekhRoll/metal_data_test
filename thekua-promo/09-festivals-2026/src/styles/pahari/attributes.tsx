@@ -5,7 +5,7 @@ import { Trishul, Lotus } from './figure';
 
 // Held attributes, each drawn around its grip point (0,0), long axis up. Rotated by the hand that holds it.
 const STEEL = '#D9D6CC';
-export type Item = 'trishul' | 'lotus' | 'gada' | 'sword' | 'kamandalu' | 'arrow' | 'bow' | 'mala' | 'chakra' | 'shankh' | 'damaru' | 'kalash' | 'vajra' | 'sickle' | 'hook' | 'abhaya' | 'varada' | 'none';
+export type Item = 'trishul' | 'lotus' | 'gada' | 'sword' | 'kamandalu' | 'arrow' | 'bow' | 'mala' | 'chakra' | 'shankh' | 'damaru' | 'kalash' | 'vajra' | 'sickle' | 'hook' | 'abhaya' | 'varada' | 'none' | 'dhyana';
 
 export const Held: React.FC<{ item: Item; s?: number }> = ({ item, s = 1 }) => {
   const g = (n: React.ReactNode) => <g transform={`scale(${s})`} data-id={'item-' + item}>{n}</g>;

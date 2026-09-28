@@ -5,9 +5,16 @@ import { Ep1CastA, Ep1CastB } from './sheets/CastSheet';
 import { Ep1, Ep1Check, EP1_FRAMES } from './episodes/pitru/Ep1_Bhagiratha';
 import { Ep2, Ep2Check, EP2_FRAMES } from './episodes/pitru/Ep2_IndiraEkadashi';
 import { DeviSheet } from './sheets/DeviSheet';
-import { FormatC, FormatCCheck, C_DUR } from './formats/navratri';
+import { FormatA, FormatACheck, aFrames, hasStory } from './formats/formatA';
+import { FormatC, FormatCCheck, C_DUR, FormatB, FormatBCheck, bFrames, bTimeline } from './formats/navratri';
 import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
 import { Ep3, Ep3Check, EP3_FRAMES } from './episodes/pitru/Ep3_Phalgu';
+import { SanjhiSift, SanjhiPortrait, SanjhiMonsoon } from './sheets/SanjhiSheets';
+import { KolamGrid, KolamCosmos, KolamDeviSheet } from './sheets/KolamSheets';
+import { TanjoreStyle, TanjorePortrait, TanjoreArdhanari } from './sheets/TanjoreSheets';
+import { MysoreStyle, MysorePortrait, MysoreTapas } from './sheets/MysoreSheets';
+import { BengalStyle, BengalPortrait, BengalScroll } from './sheets/BengalSheets';
+import { KeralaPortrait, KeralaTaraka, KeralaStyle } from './sheets/KeralaSheets';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
 import { StyleSheet, Day1C, Day1CBrand, Day1BTitle, Day1ATitle, PitruEp1Title, PitruClosing, EndCard } from './sheets/GateStills';
 
@@ -26,11 +33,33 @@ export const Root: React.FC = () => (
     {still('Ep1CastA', Ep1CastA)}
     {still('Ep1CastB', Ep1CastB)}
     {still('DeviSheet', DeviSheet)}
+    {[1, 2, 3, 4, 5, 6, 7, 8, 9].filter(hasStory).map((d) => <Composition key={'A' + d} id={`NavratriA${d}`} component={FormatA} defaultProps={{ day: d }} durationInFrames={aFrames(d)} fps={24} width={1080} height={1920} />)}
+    {[1, 2, 3, 4, 5, 6, 7, 8, 9].filter(hasStory).map((d) => <Composition key={'AC' + d} id={`NavratriACheck${d}`} component={FormatACheck} defaultProps={{ day: d }} durationInFrames={Math.ceil(aFrames(d) / 6)} fps={24} width={1080} height={1920} />)}
+    {[1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => bTimeline(d)).map((d) => <Composition key={'B' + d} id={`NavratriB${d}`} component={FormatB} defaultProps={{ day: d }} durationInFrames={bFrames(d)} fps={24} width={1080} height={1920} />)}
+    {[1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => bTimeline(d)).map((d) => <Composition key={'BC' + d} id={`NavratriBCheck${d}`} component={FormatBCheck} defaultProps={{ day: d }} durationInFrames={Math.ceil(bFrames(d) / 6)} fps={24} width={1080} height={1920} />)}
     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => <Composition key={'CC' + d} id={`NavratriCCheck${d}`} component={FormatCCheck} defaultProps={{ day: d }} durationInFrames={Math.ceil(C_DUR * 24 / 6)} fps={24} width={1080} height={1920} />)}
     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => <Composition key={'C' + d} id={`NavratriC${d}`} component={FormatC} defaultProps={{ day: d }} durationInFrames={C_DUR * 24} fps={24} width={1080} height={1920} />)}
     {still('ManjStyle', ManjStyle)}
     {still('ManjArrival', ManjArrival)}
     {still('ManjPinda', ManjPinda)}
+    {still('SanjhiSift', SanjhiSift)}
+    {still('SanjhiPortrait', SanjhiPortrait)}
+    {still('SanjhiMonsoon', SanjhiMonsoon)}
+    {still('KolamGrid', KolamGrid)}
+    {still('KolamCosmos', KolamCosmos)}
+    {still('KolamDevi', KolamDeviSheet)}
+    {still('TanjoreStyle', TanjoreStyle)}
+    {still('TanjorePortrait', TanjorePortrait)}
+    {still('TanjoreArdhanari', TanjoreArdhanari)}
+    {still('MysoreStyle', MysoreStyle)}
+    {still('MysorePortrait', MysorePortrait)}
+    {still('MysoreTapas', MysoreTapas)}
+    {still('BengalStyle', BengalStyle)}
+    {still('BengalPortrait', BengalPortrait)}
+    {still('BengalScroll', BengalScroll)}
+    {still('KeralaStyle', KeralaStyle)}
+    {still('KeralaPortrait', KeralaPortrait)}
+    {still('KeralaTaraka', KeralaTaraka)}
     {still('PattaStyle', PattaStyle)}
     {still('PattaCourt', PattaCourt)}
     {still('PattaRealms', PattaRealms)}
