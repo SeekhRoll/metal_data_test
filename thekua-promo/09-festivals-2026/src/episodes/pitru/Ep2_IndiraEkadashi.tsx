@@ -70,13 +70,13 @@ const NaradaArrives: React.FC<{ t: number; u: number }> = ({ t, u }) => {
 };
 
 // the father's message: a darker, cooler panel inside the same border system (no suffering, only waiting)
-const FatherPanel: React.FC<{ t: number; u: number; lit?: number }> = ({ t, lit = 0 }) => (
+const FatherPanel: React.FC<{ t: number; u: number; lit?: number; away?: boolean }> = ({ t, lit = 0, away = false }) => (
   <g>
     <rect x={140} y={760} width={800} height={780} fill={lit > 0 ? mixHex(T.dim, T.gold, lit * .5) : T.dim} stroke={T.black} strokeWidth={4} />
     <rect x={140} y={760} width={800} height={780} fill="none" stroke={T.dimLite} strokeWidth={10} />
     <Dots pts={[[150, 770], [930, 770], [930, 1530], [150, 1530], [150, 770]]} step={14} r={2} c="#9AA6B8" />
     <g opacity={.55}><PattaTree x={250} y={1500} h={300} seed={12} flower={T.dimLite} /><PattaTree x={830} y={1500} h={280} seed={13} flower={T.dimLite} /></g>
-    <g transform="translate(500 1060) scale(.95)"><Father blink={blinkAt(t, 4)} /></g>
+    {!away && <g transform="translate(500 1060) scale(.95)"><Father blink={blinkAt(t, 4)} /></g>}
   </g>
 );
 const FatherScene: React.FC<{ t: number; u: number }> = ({ t, u }) => (
@@ -89,7 +89,7 @@ const FatherScene: React.FC<{ t: number; u: number }> = ({ t, u }) => (
 
 // the vow: three compartments appear one after another (shradh at the river · the fast · daan the next day)
 const Vow: React.FC<{ t: number; u: number }> = ({ t, u }) => {
-  const p = [seg(u, .3, 1.3), seg(u, 4.4, 5.4), seg(u, 8.6, 9.6)];
+  const p = [seg(u, .3, 1.3), seg(u, 5.4, 6.4), seg(u, 8.2, 9.2)];
   const box = (i: number, y: number, h: number, children: React.ReactNode) => (
     <g opacity={p[i]} transform={`translate(0 ${(1 - ease(p[i])) * 30})`}>
       <rect x={130} y={y} width={820} height={h} fill={[T.red, T.redDeep, T.red][i]} stroke={T.black} strokeWidth={4} />
@@ -126,7 +126,7 @@ const Release: React.FC<{ t: number; u: number }> = ({ t, u }) => {
   const r = rng(4);
   return (
     <g>
-      <g transform={`translate(0 ${-rise * 60})`}><FatherPanel t={t} u={u} lit={lit} /></g>
+      <g transform={`translate(0 ${-rise * 60})`}><FatherPanel t={t} u={u} lit={lit} away={rise > 0} /></g>
       <g opacity={open}>
         <rect x={140} y={120} width={800} height={600 * open} fill={T.gold} stroke={T.black} strokeWidth={4} />
         <clipPath id="vk"><rect x={140} y={120} width={800} height={600 * open} /></clipPath>
@@ -196,6 +196,6 @@ export const Ep2Frame: React.FC<{ t: number }> = ({ t }) => {
 };
 
 export const Ep2: React.FC = () => { const f = useCurrentFrame(); return <Ep2Frame t={f / FPS} />; };
-export const Ep2Check = makeCheck(Ep2Frame, EP2_SCENES);
+export const Ep2Check = makeCheck(Ep2Frame, EP2_SCENES, { x0: 91, y0: 91, x1: 989, y1: 1620 });
 export const EP2_FRAMES = Math.round(tl.dur * FPS);
 export { Patta, Motes };

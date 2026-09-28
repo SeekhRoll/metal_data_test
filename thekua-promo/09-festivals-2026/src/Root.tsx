@@ -6,6 +6,7 @@ import { Ep1, Ep1Check, EP1_FRAMES } from './episodes/pitru/Ep1_Bhagiratha';
 import { Ep2, Ep2Check, EP2_FRAMES } from './episodes/pitru/Ep2_IndiraEkadashi';
 import { DeviSheet } from './sheets/DeviSheet';
 import { FormatC, C_DUR } from './formats/navratri';
+import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
 import { StyleSheet, Day1C, Day1CBrand, Day1BTitle, Day1ATitle, PitruEp1Title, PitruClosing, EndCard } from './sheets/GateStills';
 
@@ -25,6 +26,9 @@ export const Root: React.FC = () => (
     {still('Ep1CastB', Ep1CastB)}
     {still('DeviSheet', DeviSheet)}
     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => <Composition key={'C' + d} id={`NavratriC${d}`} component={FormatC} defaultProps={{ day: d }} durationInFrames={C_DUR * 24} fps={24} width={1080} height={1920} />)}
+    {still('ManjStyle', ManjStyle)}
+    {still('ManjArrival', ManjArrival)}
+    {still('ManjPinda', ManjPinda)}
     {still('PattaStyle', PattaStyle)}
     {still('PattaCourt', PattaCourt)}
     {still('PattaRealms', PattaRealms)}

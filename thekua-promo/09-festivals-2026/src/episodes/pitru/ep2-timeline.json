@@ -1,13 +1,45 @@
 {
- "dur": 91.0,
+ "dur": 86.4,
  "scenes": [
-  {"id": "title", "from": 0, "to": 6.6},
-  {"id": "court", "from": 6.6, "to": 18.4},
-  {"id": "narada", "from": 18.4, "to": 30.2},
-  {"id": "father", "from": 30.2, "to": 45.4},
-  {"id": "vow", "from": 45.4, "to": 59.4},
-  {"id": "release", "from": 59.4, "to": 73.2},
-  {"id": "moral", "from": 73.2, "to": 86},
-  {"id": "closing", "from": 86, "to": 91.0}
+  {
+   "id": "title",
+   "from": 0,
+   "to": 6.6
+  },
+  {
+   "id": "court",
+   "from": 6.6,
+   "to": 15.2
+  },
+  {
+   "id": "narada",
+   "from": 15.2,
+   "to": 25.4
+  },
+  {
+   "id": "father",
+   "from": 25.4,
+   "to": 41.8
+  },
+  {
+   "id": "vow",
+   "from": 41.8,
+   "to": 55.0
+  },
+  {
+   "id": "release",
+   "from": 55.0,
+   "to": 68.8
+  },
+  {
+   "id": "moral",
+   "from": 68.8,
+   "to": 81.4
+  },
+  {
+   "id": "closing",
+   "from": 81.4,
+   "to": 86.4
+  }
  ]
 }

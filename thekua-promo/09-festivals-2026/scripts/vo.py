@@ -13,6 +13,12 @@ VOICES = {
     "pitru": ("Rohit speaks in a calm, deep and reverent voice, like a devotional storyteller at a temple, "
               "at a slow, unhurried pace with gentle, measured intonation and soft pauses. "
               "The recording is very clear and close-up, with no background noise."),
+    "navB": ("Divya speaks in a warm, clear and gentle voice, like a friendly devotional presenter, at a moderate, "
+             "unhurried pace with soft, pleasant intonation. The recording is very clear and close-up, with no background noise."),
+    "navA": ("Rohit speaks in a calm, warm devotional storyteller voice, at a slow, unhurried pace with gentle pauses "
+             "and expressive but soft intonation. The recording is very clear and close-up, with no background noise."),
+    "patua": ("Rohit speaks in a lilting, melodic, sing-song storytelling voice, like a village balladeer, at a measured pace "
+              "with rising and falling musical intonation. The recording is very clear and close-up, with no background noise."),
 }
 
 
