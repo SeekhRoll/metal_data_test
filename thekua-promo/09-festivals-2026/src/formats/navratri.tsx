@@ -5,6 +5,7 @@ import { PahariPage } from '../styles/pahari/Page';
 import { seg, ease, easeBack } from '../styles/pahari/rand';
 import { Landscape, Petals } from '../devi/pahari/PortraitScene';
 import { Diya } from '../styles/pahari/scenery';
+import { RevealCtx } from '../styles/pahari/paint';
 import { deviFor } from '../devi/pahari/devis';
 import { TitleCard } from '../shared/TitleCard';
 import { BrandStrip } from '../shared/EndCardFull';
@@ -28,22 +29,26 @@ const Portrait: React.FC<{ d: Day; t: number; dy?: number; push?: number; bloom?
   );
 };
 
+// the page tinted with a light wash of the day's colour (brief: border and background in the day's accent)
+const wash = (hex: string) => { const n = parseInt(hex.slice(1), 16), P0 = [241, 231, 207], c = [n >> 16, (n >> 8) & 255, n & 255]; return '#' + P0.map((p, i) => Math.round(p + (c[i] - p) * .16).toString(16).padStart(2, '0')).join(''); };
+
 // ---------------------------------------------------------------- Format C · शुभकामना (13 s)
 export const C_DUR = 13;
+const GREET_Z = { x: 110, y: 300, w: 860, h: 170 };
 export const C_SCENES: Scene[] = [{ id: 'diya', from: 0, to: 3 }, { id: 'portrait', from: 3, to: 10 }, { id: 'brand', from: 10, to: C_DUR }];
 export const FormatCFrame: React.FC<{ t: number; day: number }> = ({ t, day }) => {
   const d = days[day - 1], hex = d.colour.hex;
   const lit = seg(t, .5, 1.6), rv = reveal(Math.max(0, t - 2.4), 1.1), show = seg(t, 2.6, 3.2);
   const text = seg(t, 4.4, 5.4), brand = seg(t, 10, 10.8);
   return (
-    <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer}
+    <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer} windowFill={wash(hex)}
       painting={<>
         <g opacity={show}><Portrait d={d} t={t} push={seg(t, 3, 13)} bloom={.35 + .3 * Math.sin(Math.PI * seg(t, 3, 6))} /></g>
-        <g opacity={1 - show * .0}><Diya x={show > 0 ? 880 : 540} y={show > 0 ? 1470 : 900} s={show > 0 ? .9 : 2.2} flame={t} glow={lit} /></g>
-        {t > 3.2 && <Petals t={t - 3.2} n={22} from={0} />}
+        <RevealCtx.Provider value={{ line: 1, fill: 1, shimmer: -1 }}><Diya x={show > 0 ? 880 : 540} y={show > 0 ? 1470 : 900} s={show > 0 ? .9 : 2.2} flame={t} glow={lit} /></RevealCtx.Provider>
+        {t > 3.2 && <Petals t={t - 3.2} n={22} from={0} avoid={[GREET_Z]} />}
       </>}
       overlay={<>
-        <TextZone id="greet" z={{ x: 110, y: 300, w: 860, h: 170 }} opacity={text * (1 - brand)}><T size={112} color={P.border} font={FONT.rozha}>शुभ नवरात्रि</T></TextZone>
+        <TextZone id="greet" z={GREET_Z} opacity={text * (1 - brand)}><T size={112} color={P.border} font={FONT.rozha}>शुभ नवरात्रि</T></TextZone>
         <TextZone id="c-lines" z={{ x: 90, y: 1592, w: 900, h: 248 }} opacity={text * (1 - brand)}>
           <T size={46} color={P.ink} font={FONT.rozha}>{d.dayNameHi} · {d.devi.nameHi}</T>
           <T size={42} color={shade(hex === '#F2EFE6' ? '#8A7A5A' : hex, -.35)} mt={6}>{d.mantra}</T>
@@ -66,7 +71,7 @@ export const FormatBFrame: React.FC<{ t: number; day: number; cues: Cue[] }> = (
   const col = t >= 18 && t < 23 ? Math.min(seg(t, 18, 18.6), 1 - seg(t, 22.6, 23)) : 0, mantra = seg(t, 23, 23.6);
   return (
     <PahariPage border={hex} reveal={rv} shimmer={rv.shimmer}
-      painting={<><Portrait d={d} t={t} push={seg(t, 0, 25)} /><Petals t={t} n={12} /></>}
+      painting={<><Portrait d={d} t={t} push={seg(t, 0, 25)} /><Petals t={t} n={12} avoid={[{ x: 110, y: 100, w: 860, h: 360 }]} /></>}
       overlay={<>
         {title > 0 && <TitleCard title={d.devi.nameHi} artLine={PAHARI_LINE} series={`नवरात्रि · ${d.dayNameHi}`} a={title} z={{ x: 130, y: 110, w: 820, h: 300 }} />}
         {k >= 0 && <>
@@ -86,4 +91,5 @@ export const FormatBFrame: React.FC<{ t: number; day: number; cues: Cue[] }> = (
 };
 
 export const FormatC: React.FC<{ day: number }> = ({ day }) => { const f = useCurrentFrame(); return <FormatCFrame t={f / FPS} day={day} />; };
-export const FormatCCheck: React.FC<{ day: number }> = ({ day }) => { const C = makeCheck(({ t }) => <FormatCFrame t={t} day={day} />, C_SCENES); return <C />; };
+const CHECK_C = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => makeCheck(({ t }) => <FormatCFrame t={t} day={d} />, C_SCENES, { x0: PAGE.win.x, y0: PAGE.win.y, x1: PAGE.win.x + PAGE.win.w, y1: PAGE.win.y + PAGE.win.h }));
+export const FormatCCheck: React.FC<{ day: number }> = ({ day }) => { const C = CHECK_C[day - 1]; return <C />; };

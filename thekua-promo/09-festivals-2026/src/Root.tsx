@@ -5,8 +5,9 @@ import { Ep1CastA, Ep1CastB } from './sheets/CastSheet';
 import { Ep1, Ep1Check, EP1_FRAMES } from './episodes/pitru/Ep1_Bhagiratha';
 import { Ep2, Ep2Check, EP2_FRAMES } from './episodes/pitru/Ep2_IndiraEkadashi';
 import { DeviSheet } from './sheets/DeviSheet';
-import { FormatC, C_DUR } from './formats/navratri';
+import { FormatC, FormatCCheck, C_DUR } from './formats/navratri';
 import { ManjStyle, ManjArrival, ManjPinda } from './sheets/ManjSheets';
+import { Ep3, Ep3Check, EP3_FRAMES } from './episodes/pitru/Ep3_Phalgu';
 import { PattaStyle, PattaCourt, PattaRealms } from './sheets/PattaSheets';
 import { StyleSheet, Day1C, Day1CBrand, Day1BTitle, Day1ATitle, PitruEp1Title, PitruClosing, EndCard } from './sheets/GateStills';
 
@@ -25,6 +26,7 @@ export const Root: React.FC = () => (
     {still('Ep1CastA', Ep1CastA)}
     {still('Ep1CastB', Ep1CastB)}
     {still('DeviSheet', DeviSheet)}
+    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => <Composition key={'CC' + d} id={`NavratriCCheck${d}`} component={FormatCCheck} defaultProps={{ day: d }} durationInFrames={Math.ceil(C_DUR * 24 / 6)} fps={24} width={1080} height={1920} />)}
     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => <Composition key={'C' + d} id={`NavratriC${d}`} component={FormatC} defaultProps={{ day: d }} durationInFrames={C_DUR * 24} fps={24} width={1080} height={1920} />)}
     {still('ManjStyle', ManjStyle)}
     {still('ManjArrival', ManjArrival)}
@@ -35,6 +37,8 @@ export const Root: React.FC = () => (
     <Composition id="PitruEp1" component={Ep1} durationInFrames={EP1_FRAMES} fps={24} width={1080} height={1920} />
     <Composition id="PitruEp2" component={Ep2} durationInFrames={EP2_FRAMES} fps={24} width={1080} height={1920} />
     <Composition id="PitruEp2Check" component={Ep2Check} durationInFrames={Math.ceil(EP2_FRAMES / 6)} fps={24} width={1080} height={1920} />
+    <Composition id="PitruEp3" component={Ep3} durationInFrames={EP3_FRAMES} fps={24} width={1080} height={1920} />
+    <Composition id="PitruEp3Check" component={Ep3Check} durationInFrames={Math.ceil(EP3_FRAMES / 6)} fps={24} width={1080} height={1920} />
     <Composition id="PitruEp1Check" component={Ep1Check} durationInFrames={Math.ceil(EP1_FRAMES / 6)} fps={24} width={1080} height={1920} />
   </>
 );
