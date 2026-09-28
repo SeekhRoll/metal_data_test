@@ -89,7 +89,7 @@ const FatherScene: React.FC<{ t: number; u: number }> = ({ t, u }) => (
 
 // the vow: three compartments appear one after another (shradh at the river · the fast · daan the next day)
 const Vow: React.FC<{ t: number; u: number }> = ({ t, u }) => {
-  const p = [seg(u, .3, 1.3), seg(u, 4.4, 5.4), seg(u, 8.6, 9.6)];
+  const p = [seg(u, .3, 1.3), seg(u, 5.4, 6.4), seg(u, 8.2, 9.2)];
   const box = (i: number, y: number, h: number, children: React.ReactNode) => (
     <g opacity={p[i]} transform={`translate(0 ${(1 - ease(p[i])) * 30})`}>
       <rect x={130} y={y} width={820} height={h} fill={[T.red, T.redDeep, T.red][i]} stroke={T.black} strokeWidth={4} />
@@ -196,6 +196,6 @@ export const Ep2Frame: React.FC<{ t: number }> = ({ t }) => {
 };
 
 export const Ep2: React.FC = () => { const f = useCurrentFrame(); return <Ep2Frame t={f / FPS} />; };
-export const Ep2Check = makeCheck(Ep2Frame, EP2_SCENES);
+export const Ep2Check = makeCheck(Ep2Frame, EP2_SCENES, { x0: 91, y0: 91, x1: 989, y1: 1620 });
 export const EP2_FRAMES = Math.round(tl.dur * FPS);
 export { Patta, Motes };
