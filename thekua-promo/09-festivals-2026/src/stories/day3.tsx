@@ -101,7 +101,7 @@ const Kohbar: React.FC<{ t: number; bloom?: number; low?: number }> = ({ t, bloo
   <G id="lotus-top"><LotusTop x={540} y={260 + low} n={10} grow={bloom} /></G>
 </>;
 
-const S0: React.FC<SP> = ({ t, u }) => <><Kohbar t={t} bloom={ease(seg(u, 0, 2))} low={420} /><Bharni d="M160 1420 H920 V1520 H160 Z" fill={C.indigoLight} pattern="scales" band={4} />{[260, 420, 580, 740, 860].map((x, i) => <Lotus key={i} x={x} y={1400} s={.7} />)}</>;
+const S0: React.FC<SP> = ({ t, u }) => <><Kohbar t={t} bloom={ease(seg(u, 0, 2))} low={530} /><Bharni d="M160 1420 H920 V1520 H160 Z" fill={C.indigoLight} pattern="scales" band={4} />{[260, 420, 580, 740, 860].map((x, i) => <Lotus key={i} x={x} y={1400} s={.7} />)}</>;
 
 // the palace decorated for the wedding; Queen Maina waiting eagerly
 const Palace: React.FC<{ t: number }> = ({ t }) => <>
