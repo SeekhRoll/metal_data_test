@@ -6,6 +6,7 @@ import { S, Gold, circle, ellipse } from './paint';
 export type HeadProps = { skin?: string; crown?: boolean; crescent?: boolean; veil?: string | null; blink?: number; nath?: boolean; tilak?: string; male?: boolean };
 export const Head: React.FC<HeadProps> = ({ skin = P.skin, crown = false, crescent = false, veil = null, blink = 0, nath = true, tilak, male = false }) => {
   const eyeOpen = 1 - blink;
+  const uid = 'eye' + React.useId().replace(/[^a-zA-Z0-9]/g, '');
   return (
     <g>
       {/* hair mass */}
@@ -21,8 +22,8 @@ export const Head: React.FC<HeadProps> = ({ skin = P.skin, crown = false, cresce
       {eyeOpen > .15 ? (
         <g>
           <S d={`M10 -13 C16 ${-13 - 7 * eyeOpen} 26 ${-12 - 7 * eyeOpen} 31.5 -12 C26 ${-12 + 4 * eyeOpen} 16 ${-12 + 4 * eyeOpen} 10 -13Z`} fill={P.pearl} stroke="none" />
-          <clipPath id="eyeClip"><path d={`M10 -13 C16 ${-13 - 7 * eyeOpen} 26 ${-12 - 7 * eyeOpen} 31.5 -12 C26 ${-12 + 4 * eyeOpen} 16 ${-12 + 4 * eyeOpen} 10 -13Z`} /></clipPath>
-          <g clipPath="url(#eyeClip)"><circle cx={25.5} cy={-13.5} r={3.6} fill={P.hair} /></g>
+          <clipPath id={uid}><path d={`M10 -13 C16 ${-13 - 7 * eyeOpen} 26 ${-12 - 7 * eyeOpen} 31.5 -12 C26 ${-12 + 4 * eyeOpen} 16 ${-12 + 4 * eyeOpen} 10 -13Z`} /></clipPath>
+          <g clipPath={`url(#${uid})`}><circle cx={25.5} cy={-13.5} r={3.6} fill={P.hair} /></g>
           <S d={`M4 -12.2 L10 -13 C16 ${-13 - 7 * eyeOpen} 26 ${-12 - 7 * eyeOpen} 31.5 -12`} stroke={P.hair} sw={1.9} />
           <S d={`M10 -13 C16 ${-12 + 4 * eyeOpen} 26 ${-12 + 4 * eyeOpen} 31.5 -12`} stroke={P.skinLine} sw={1} />
         </g>

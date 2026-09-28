@@ -51,6 +51,8 @@ export const PahariDefs: React.FC<{ shimmer?: number }> = ({ shimmer = -1 }) => 
         <feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .32  0 0 0 0 .15  0 0 0 -2.2 1.25" />
       </filter>
       <filter id="haloBloom" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="18" /></filter>
+      {/* turns anything into a soft grey shadow (Indra's shadow, figures fading) */}
+      <filter id="silhouette" x="-10%" y="-10%" width="120%" height="120%"><feColorMatrix type="matrix" values="0 0 0 0 .16  0 0 0 0 .13  0 0 0 0 .14  0 0 0 .6 0" /></filter>
       <filter id="softBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" /></filter>
     </defs>
   );
