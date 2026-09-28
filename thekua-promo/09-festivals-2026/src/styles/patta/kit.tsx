@@ -180,3 +180,24 @@ export const Veena: React.FC<{ x: number; y: number; rot?: number; s?: number }>
 );
 
 export { limb, circle };
+
+// Pattachitra river: flat blue band with rows of stylised wave curls, fish and lotus
+export const PattaRiver: React.FC<{ x: number; y: number; w: number; h: number; t?: number; fish?: boolean }> = ({ x, y, w, h, t = 0, fish = true }) => {
+  const rows: React.ReactNode[] = [];
+  for (let j = 0, yy = y + 14; yy < y + h - 8; yy += 22, j++) {
+    let d = '';
+    const off = ((t * 18 + j * 13) % 36) - 36;
+    for (let xx = x + off; xx < x + w; xx += 36) d += `M${xx} ${yy} q9 -10 18 0 q-5 6 -10 2 `;
+    rows.push(<path key={j} d={d} stroke={T.white} strokeWidth={1.6} fill="none" opacity={.9} />);
+  }
+  return (
+    <g data-kind="graphic" data-id="patta-river">
+      <clipPath id={`prc${Math.round(x)}${Math.round(y)}`}><rect x={x} y={y} width={w} height={h} /></clipPath>
+      <rect x={x} y={y} width={w} height={h} fill={T.blue} />
+      <g clipPath={`url(#prc${Math.round(x)}${Math.round(y)})`}>{rows}
+        {fish && [0, 1].map((i) => { const fx = x + ((t * 40 + i * w / 2) % (w + 80)) - 40, fy = y + h * (.35 + .3 * i); return <g key={i}><path d={`M${fx - 22} ${fy} C${fx - 10} ${fy - 10} ${fx + 10} ${fy - 10} ${fx + 18} ${fy} C${fx + 10} ${fy + 10} ${fx - 10} ${fy + 10} ${fx - 22} ${fy}Z M${fx - 22} ${fy} L${fx - 32} ${fy - 8} L${fx - 32} ${fy + 8}Z`} fill={T.ochre} stroke={T.black} strokeWidth={1.4} /><circle cx={fx + 10} cy={fy - 2} r={1.6} fill={T.black} /></g>; })}
+      </g>
+      <path d={`M${x} ${y}H${x + w} M${x} ${y + h}H${x + w}`} stroke={T.black} strokeWidth={3} />
+    </g>
+  );
+};
