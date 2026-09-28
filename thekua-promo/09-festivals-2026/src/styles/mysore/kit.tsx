@@ -21,6 +21,7 @@ export const MyDefs: React.FC = () => (
       <feColorMatrix in="g" type="matrix" values="0 0 0 0 .42  0 0 0 0 .36  0 0 0 0 .28  0 0 0 -1.6 1" />
     </filter>
     <radialGradient id="mySkin" cx=".45" cy=".4" r=".7"><stop offset="0" stopColor={MY.skin} /><stop offset=".75" stopColor={MY.skin} /><stop offset="1" stopColor={MY.skinShade} /></radialGradient>
+    <radialGradient id="myAsh" cx=".45" cy=".4" r=".7"><stop offset="0" stopColor="#AFC0CF" /><stop offset=".75" stopColor="#AFC0CF" /><stop offset="1" stopColor="#8C9DAF" /></radialGradient>
     <radialGradient id="myMoon" cx=".5" cy=".5" r=".5"><stop offset="0" stopColor={MY.moon} stopOpacity=".95" /><stop offset=".45" stopColor={MY.moon} stopOpacity=".5" /><stop offset="1" stopColor={MY.moon} stopOpacity="0" /></radialGradient>
     <linearGradient id="myCloth" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#000" stopOpacity=".12" /><stop offset=".5" stopColor="#000" stopOpacity="0" /><stop offset="1" stopColor="#000" stopOpacity=".14" /></linearGradient>
   </defs>
@@ -37,7 +38,7 @@ export const Gesso: React.FC<{ d: string; dots?: [number, number][] }> = ({ d, d
 );
 
 // ---------------------------------------------------------------- serene frontal face (fine line, soft modelling)
-export const MyFace: React.FC<{ closed?: number; blink?: number; crown?: 'kireeta' | 'bun' | 'jata' | 'none'; ornaments?: boolean; hairLoose?: boolean }> = ({ closed = 0, blink = 0, crown = 'kireeta', ornaments = true, hairLoose = false }) => {
+export const MyFace: React.FC<{ closed?: number; blink?: number; crown?: 'kireeta' | 'bun' | 'jata' | 'none'; ornaments?: boolean; hairLoose?: boolean; skin?: string }> = ({ closed = 0, blink = 0, crown = 'kireeta', ornaments = true, hairLoose = false, skin = 'url(#mySkin)' }) => {
   const shut = Math.max(closed, blink);
   const eye = (k: number) => <g key={k}>
     {shut < .9 && <><path d={lens(k * 16, -6, k * 62, -10, 7 * (1 - shut) * -k, 3 * k)} fill={MY.white} /><circle cx={k * 38} cy={-8} r={8 * (1 - shut)} fill={MY.hair} /></>}
@@ -47,8 +48,8 @@ export const MyFace: React.FC<{ closed?: number; blink?: number; crown?: 'kireet
   </g>;
   return <g>
     {hairLoose && <L d={smooth([[-96, -60], [-120, 80], [-130, 260], [-60, 300], [60, 300], [130, 260], [120, 80], [96, -60], [0, -130]], true)} fill={MY.hair} shade={false} w={1.4} />}
-    {[-1, 1].map((k) => <L key={k} d={lens(k * 88, -24, k * 94, 30, 8)} fill="url(#mySkin)" shade={false} w={1.8} />)}
-    <path d={smooth([[0, -110], [74, -94], [92, -30], [84, 40], [52, 100], [0, 118], [-52, 100], [-84, 40], [-92, -30], [-74, -94]], true)} fill="url(#mySkin)" stroke={MY.line} strokeWidth={2} />
+    {[-1, 1].map((k) => <L key={k} d={lens(k * 88, -24, k * 94, 30, 8)} fill={skin} shade={false} w={1.8} />)}
+    <path d={smooth([[0, -110], [74, -94], [92, -30], [84, 40], [52, 100], [0, 118], [-52, 100], [-84, 40], [-92, -30], [-74, -94]], true)} fill={skin} stroke={MY.line} strokeWidth={2} />
     <L d="M-92 -30 C-90 -100 -40 -118 0 -112 C40 -118 90 -100 92 -30 C70 -64 30 -72 0 -70 C-30 -72 -70 -64 -92 -30Z" fill={MY.hair} shade={false} w={1.6} />
     {eye(-1)}{eye(1)}
     <Ln d="M-4 -24 C-2 10 -10 30 -2 40 C4 46 12 42 14 38" w={1.8} />

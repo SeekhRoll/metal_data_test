@@ -17,6 +17,8 @@ import { DAY3 } from '../stories/day3';
 import { DAY4 } from '../stories/day4';
 import { DAY5 } from '../stories/day5';
 import { DAY6 } from '../stories/day6';
+import { DAY8 } from '../stories/day8';
+import { MysorePage } from '../sheets/MysoreSheets';
 import { ScrollPage } from '../sheets/BengalSheets';
 import { FloralBand } from '../styles/bengalpat/kit';
 import { MuralPage } from '../sheets/KeralaSheets';
@@ -29,8 +31,8 @@ import { C as MC } from '../styles/madhubani/palette';
 
 // Format A · देवी कथा: one scene per VO line (scripts/fit_a.py -> a-timeline.json), in the day's own art form.
 type AT = { dur: number; lines: { id: string; text: string; at: number; dur: number }[]; scenes: Scene[] };
-type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam' | 'shadow' | 'kerala' | 'bengal'; panelOf?: number[]; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
-const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4, 5: DAY5, 6: DAY6, 7: DAY7 };
+type Story = { page: 'pahari' | 'sanjhi' | 'madhubani' | 'kolam' | 'shadow' | 'kerala' | 'bengal' | 'mysore'; panelOf?: number[]; scenes: React.FC<{ t: number; u: number; dur: number }>[]; moralFrom: number };
+const STORIES: Record<number, Story> = { 1: DAY1, 2: DAY2, 3: DAY3, 4: DAY4, 5: DAY5, 6: DAY6, 7: DAY7, 8: DAY8 };
 export const aTimeline = (d: number): AT | null => (atl as Record<string, AT>)[String(d)] ?? null;
 export const aFrames = (d: number) => Math.round((aTimeline(d)?.dur ?? 50) * FPS);
 export const hasStory = (d: number) => !!STORIES[d] && !!aTimeline(d);
@@ -104,6 +106,11 @@ export const FormatAFrame: React.FC<{ t: number; day: number }> = ({ t, day }) =
       {k < 1 && Prev && pv && <g transform={`translate(0 ${pp * PH})`}><Prev t={t} u={t - pv.from} dur={pv.to - pv.from} /><FloralBand y={1590} /></g>}
       <g transform={`translate(0 ${p * PH})`}><Scene t={t} u={u} dur={dur} /><FloralBand y={1590} /><FloralBand y={-70} /></g>
     </g></ScrollPage>;
+  }
+  if (st.page === 'mysore') {
+    const fade = idx > 0 && u < .8 ? ease(seg(u, 0, .8)) : 1;
+    const Prev = idx > 0 ? st.scenes[idx - 1] : null, pv = idx > 0 ? tl.scenes[idx - 1] : null;
+    return <MysorePage overlay={texts}>{fade < 1 && Prev && pv && <Prev t={t} u={t - pv.from} dur={pv.to - pv.from} />}<g opacity={fade}><Scene t={t} u={u} dur={dur} /></g></MysorePage>;
   }
   if (st.page === 'kerala') {
     // the mural wall: foliage ground inside painted frame bands; scenes cross-fade like a lamp moving along the wall
