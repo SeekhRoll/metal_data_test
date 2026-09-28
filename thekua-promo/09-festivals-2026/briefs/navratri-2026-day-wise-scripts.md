@@ -8,7 +8,7 @@ Companion to `navratri-2026-series-plan-and-claude-code-brief.md`.
 - **A:** देवी कथा (55–60s, in the day's own art form)
 
 **Appended to every video:**
-- A and B: the full end card (plan, section 7.1).
+- A and B: the full end card (plan, section 7.1), **deferred**: appended after all videos are finished.
 - C: the short brand strip (plan, section 7.2).
 
 **Art form line on B and C (all days):** पहाड़ी लघुचित्र शैली में · हिमाचल प्रदेश
@@ -247,6 +247,7 @@ Companion to `navratri-2026-series-plan-and-claude-code-brief.md`.
 ---
 
 ## End card VO (all A and B videos, one recording)
+*(Amended 28 Sep: the end card and its VO are deferred and appended to all A and B videos after they are finished; see the series plan, 7.1.)*
 श्री देसी ठेकुआ की ओर से, नवरात्रि की शुभकामनाएँ। ठेकुआ, बेसन सेव, क्रिस्पी पापड़ी, ठेकुआ कुकीज़ और बेक्ड ठेकुआ — घर का बना, ऑर्डर पर ताज़ा। ऑर्डर के लिए, बेझिझक कॉल करें।
 
 ## Notes

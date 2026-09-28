@@ -1,6 +1,6 @@
 # Navratri 2026: Series Plan and Claude Code Brief
 
-**Sponsor:** Shri Desi Thekua and its product range (mentioned only at the end of each video)
+**Sponsor:** Sri Desi Thekua and its product range (mentioned only at the end of each video)
 **Festival:** Sharad Navratri, Sunday 11 October to Monday 19 October 2026 (Dussehra on 20 October)
 **Output:** 9 days × 3 formats = **27 videos**. The minimum is 1 per day (Format C).
 **Format:** 9:16 vertical, 1080×1920, 24fps
@@ -12,8 +12,8 @@
 ## 1. Series rules
 
 1. **The content is about the day's Devi only.** The story, moral and facts must stand on their own, with no link to the products.
-2. **Products appear only in the end card,** as a sponsor mention: "Shri Desi Thekua की ओर से".
-3. **Use "Shri" (श्री) spelling throughout,** matching the menu.
+2. **Products appear only in the end card,** as a sponsor mention: "Sri Desi Thekua की ओर से".
+3. **Use "Sri" spelling throughout** (Hindi: श्री), as in all earlier Sri Desi Thekua videos. *(Amended 28 Sep: brand stays "Sri", not "Shri".)*
 4. **Art styles:**
    - **Formats B and C** use one unified style, **Pahari miniature** (section 3), for all 9 days, so the daily greeting and explainer are instantly recognisable.
    - **Format A** stories each use a **different regional art form** (section 4), under the series name **"नवरात्रि · नौ देवियाँ, नौ कलाएँ"**. The nine days become a journey across India's art traditions.
@@ -235,13 +235,13 @@ Traditions vary slightly. This table is the series standard, and it applies in e
 ### 6.3 `menu.json`, the single source for the end card
 ```json
 {
-  "brand": "Shri Desi Thekua",
+  "brand": "Sri Desi Thekua",
   "products": [
-    { "name": "Shri Desi Thekua", "weight": "250 g", "price": 200 },
-    { "name": "Shri Besan Sev", "weight": "250 g", "price": 100 },
-    { "name": "Shri Crispy Papdi", "weight": "250 g", "price": 175 },
-    { "name": "Shri Crunchy Thekua Cookies", "weight": "250 g", "price": 250 },
-    { "name": "Shri Desi Baked Thekua", "weight": "200 g", "price": 300 }
+    { "name": "Sri Desi Thekua", "weight": "250 g", "price": 200 },
+    { "name": "Sri Besan Sev", "weight": "250 g", "price": 100 },
+    { "name": "Sri Crispy Papdi", "weight": "250 g", "price": 175 },
+    { "name": "Sri Crunchy Thekua Cookies", "weight": "250 g", "price": 250 },
+    { "name": "Sri Desi Baked Thekua", "weight": "200 g", "price": 300 }
   ],
   "claims": ["No Preservative", "No Palm Oil"],
   "delivery": "₹30",
@@ -256,14 +256,16 @@ Prices and claims are changed in one place and flow into all 27 videos. See sect
 ## 7. End cards
 
 ### 7.1 Full end card (Formats A and B, about 6–8s)
+> **Amended 28 Sep: end card deferred.** All videos are finished first without it. Formats A and B are rendered to end on a clean fade, and the end card is built later as one separate clip (with the end card VO) that is appended to all 18 A and B videos at the final mux. The duration limits in section 9 apply once it is appended; until then A runs about 52s and B about 25s. Format C's short brand strip (section 7.2) has no products or prices and stays in.
+
 - **Top line:** "नवरात्रि की शुभकामनाओं के साथ".
-- **Brand:** "Shri Desi Thekua की ओर से".
+- **Brand:** "Sri Desi Thekua की ओर से".
 - **Product row:** 5 product tiles in a neutral Pahari border (the same end card for all 27 videos, whatever the story's art form). Use **real product photos** supplied by the user (clean crops, not screenshots of the menu), each with name, weight and price.
 - **Claims row, then delivery and order notes, then the phone number,** large and centred.
 - **VO (neutral, no link to the story):** श्री देसी ठेकुआ की ओर से, नवरात्रि की शुभकामनाएँ। ठेकुआ, बेसन सेव, क्रिस्पी पापड़ी, ठेकुआ कुकीज़ और बेक्ड ठेकुआ — घर का बना, ऑर्डर पर ताज़ा। ऑर्डर के लिए, बेझिझक कॉल करें।
 
 ### 7.2 Short brand strip (Format C, about 3s)
-"Shri Desi Thekua की ओर से · शुभ नवरात्रि · 📞 8178226605". No products or prices.
+"Sri Desi Thekua की ओर से · शुभ नवरात्रि · 📞 8178226605". No products or prices.
 
 ---
 
@@ -311,7 +313,7 @@ Today is 28 Sep. Day 1 is 11 Oct. New style systems are built in date order, so 
 
 | Dates | Work | Gate |
 |---|---|---|
-| 29 Sep – 1 Oct | Pahari style system; Format C and B templates; title card; both end cards | Approve stills of the style sheet, title card and end cards |
+| 29 Sep – 1 Oct | Pahari style system; Format C and B templates; title card; brand strip (full end card deferred, see 7.1) | Approve stills of the style sheet and title card |
 | 2 – 5 Oct | 9 Pahari Devi portraits for B and C | Iconography check against 6.2 |
 | 5 Oct | Record all VO in one session (9 × B, 9 × A, end card) | — |
 | 6 – 8 Oct | Batch-render all 9 Format C and 9 Format B videos | All checks pass |

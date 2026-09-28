@@ -16,7 +16,7 @@ const Tile: React.FC<{ p: (typeof menu.products)[number]; w: number; h: number }
       <div style={{ width: w - 34, height: w - 34, background: '#E3D6B6', border: `1px solid ${P.goldDeep}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {src ? <Img src={staticFile(src)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontFamily: FONT.serif, fontSize: 18, color: P.goldDeep }}>photo</span>}
       </div>
-      <div data-kind="text" style={{ fontFamily: FONT.serif, fontSize: 21, fontWeight: 700, color: P.ink, textAlign: 'center', lineHeight: 1.15, marginTop: 10, height: 50, display: 'flex', alignItems: 'center' }}>{p.name.replace('Shri ', '')}</div>
+      <div data-kind="text" style={{ fontFamily: FONT.serif, fontSize: 21, fontWeight: 700, color: P.ink, textAlign: 'center', lineHeight: 1.15, marginTop: 10, height: 50, display: 'flex', alignItems: 'center' }}>{p.name.replace('Sri ', '')}</div>
       <div data-kind="text" style={{ fontFamily: FONT.serif, fontSize: 20, color: P.ink, marginTop: 4 }}>{p.weight} · <b style={{ color: P.border }}>₹{p.price}</b></div>
     </div>
   );

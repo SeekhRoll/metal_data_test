@@ -1,34 +1,34 @@
 {
- "brand": "Shri Desi Thekua",
+ "brand": "Sri Desi Thekua",
  "brandHi": "श्री देसी ठेकुआ",
  "products": [
   {
    "id": "thekua",
-   "name": "Shri Desi Thekua",
+   "name": "Sri Desi Thekua",
    "weight": "250 g",
    "price": 200
   },
   {
    "id": "sev",
-   "name": "Shri Besan Sev",
+   "name": "Sri Besan Sev",
    "weight": "250 g",
    "price": 100
   },
   {
    "id": "papdi",
-   "name": "Shri Crispy Papdi",
+   "name": "Sri Crispy Papdi",
    "weight": "250 g",
    "price": 175
   },
   {
    "id": "cookies",
-   "name": "Shri Crunchy Thekua Cookies",
+   "name": "Sri Crunchy Thekua Cookies",
    "weight": "250 g",
    "price": 250
   },
   {
    "id": "baked",
-   "name": "Shri Desi Baked Thekua",
+   "name": "Sri Desi Baked Thekua",
    "weight": "200 g",
    "price": 300
   }

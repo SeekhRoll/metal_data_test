@@ -124,7 +124,7 @@ export const PitruClosing: React.FC = () => {
     <AbsoluteFill>
       <PahariPage reverent windowFill="#1E140E" cartouche
         painting={<><rect x={0} y={0} width={1080} height={1920} fill="#1E140E" /><Diya x={540} y={900} s={2.6} flame={t} glow={1.2} /></>}
-        overlay={<TextZone id="closing" z={{ x: 90, y: 1592, w: 900, h: 248 }}><T size={62} color={P.ink} font={FONT.rozha}>पितरों को नमन।</T><T size={40} color={P.ink} mt={10}><span style={{ fontFamily: FONT.serif, fontWeight: 700 }}>Shri Desi Thekua</span> की ओर से</T></TextZone>} />
+        overlay={<TextZone id="closing" z={{ x: 90, y: 1592, w: 900, h: 248 }}><T size={62} color={P.ink} font={FONT.rozha}>पितरों को नमन।</T><T size={40} color={P.ink} mt={10}><span style={{ fontFamily: FONT.serif, fontWeight: 700 }}>Sri Desi Thekua</span> की ओर से</T></TextZone>} />
       <IncenseHaze t={t} a={.6} />
     </AbsoluteFill>
   );
