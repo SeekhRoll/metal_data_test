@@ -53,9 +53,15 @@ export const Subtitles: React.FC<{ cues: Cue[]; t: number; z: Zone; size?: numbe
 // ---------------------------------------------------------------- automated text-collision check (brief §10): 24 px padding
 const PAD = 24;
 type Box = { id: string; x0: number; y0: number; x1: number; y1: number };
+// effective opacity through the ancestors: fully faded elements are not on screen and are skipped
+function alpha(el: Element | null, root: Element) {
+  let a = 1;
+  for (let e = el; e && e !== root; e = e.parentElement) { a *= parseFloat(getComputedStyle(e).opacity || '1'); const o = e.getAttribute('opacity'); if (o !== null) a *= parseFloat(o); }
+  return a;
+}
 function boxes(root: HTMLElement, kind: string): Box[] {
   const r0 = root.getBoundingClientRect(), k = 1080 / r0.width;
-  return Array.from(root.querySelectorAll(`[data-kind="${kind}"]`)).map((el, i) => {
+  return Array.from(root.querySelectorAll(`[data-kind="${kind}"]`)).filter((el) => alpha(el, root) > .02).map((el, i) => {
     const b = el.getBoundingClientRect();
     return { id: el.getAttribute('data-id') ?? `${kind}${i}`, x0: (b.left - r0.left) * k, y0: (b.top - r0.top) * k, x1: (b.right - r0.left) * k, y1: (b.bottom - r0.top) * k };
   }).filter((b) => b.x1 > b.x0 && b.y1 > b.y0);

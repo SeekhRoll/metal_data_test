@@ -1,15 +1,55 @@
 {
- "dur": 100.0,
+ "dur": 96.6,
  "scenes": [
-  {"id": "title", "from": 0, "to": 6.4},
-  {"id": "arrival", "from": 6.4, "to": 18.4},
-  {"id": "waits", "from": 18.4, "to": 28.4},
-  {"id": "call", "from": 28.4, "to": 39.6},
-  {"id": "pinda", "from": 39.6, "to": 54.4},
-  {"id": "return", "from": 54.4, "to": 66.6},
-  {"id": "truth", "from": 66.6, "to": 77.4},
-  {"id": "legacy", "from": 77.4, "to": 90.4},
-  {"id": "moral", "from": 90.4, "to": 95.6},
-  {"id": "closing", "from": 95.6, "to": 100.0}
+  {
+   "id": "title",
+   "from": 0,
+   "to": 6.0
+  },
+  {
+   "id": "arrival",
+   "from": 6.0,
+   "to": 16.6
+  },
+  {
+   "id": "waits",
+   "from": 16.6,
+   "to": 25.8
+  },
+  {
+   "id": "call",
+   "from": 25.8,
+   "to": 35.2
+  },
+  {
+   "id": "pinda",
+   "from": 35.2,
+   "to": 49.2
+  },
+  {
+   "id": "return",
+   "from": 49.2,
+   "to": 60.6
+  },
+  {
+   "id": "truth",
+   "from": 60.6,
+   "to": 70.6
+  },
+  {
+   "id": "legacy",
+   "from": 70.6,
+   "to": 85.6
+  },
+  {
+   "id": "moral",
+   "from": 85.6,
+   "to": 91.6
+  },
+  {
+   "id": "closing",
+   "from": 91.6,
+   "to": 96.6
+  }
  ]
 }
