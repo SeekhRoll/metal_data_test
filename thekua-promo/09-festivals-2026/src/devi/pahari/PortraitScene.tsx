@@ -48,15 +48,19 @@ const Flowers: React.FC<{ y0: number; y1: number; seed: number }> = ({ y0, y1, s
 };
 
 // marigold petals drifting down (idle life / blessing)
-export const Petals: React.FC<{ t: number; n?: number; seed?: number; from?: number }> = ({ t, n = 26, seed = 9, from = 0 }) => {
+export type Rect = { x: number; y: number; w: number; h: number };
+export const Petals: React.FC<{ t: number; n?: number; seed?: number; from?: number; avoid?: Rect[] }> = ({ t, n = 26, seed = 9, from = 0, avoid = [] }) => {
   const r = rng(seed), w = PAGE.win, out: React.ReactNode[] = [];
   for (let i = 0; i < n; i++) {
     const x0 = w.x + r() * w.w, sp = 70 + r() * 60, ph = r() * 20, dt = t - from;
     if (dt < 0) continue;
     const y = w.y - 30 + ((dt * sp + ph * 90) % (w.h + 60)), x = x0 + 30 * Math.sin(dt * 1.3 + ph);
-    out.push(<Marigold key={i} x={x} y={y} r={5 + r() * 4} rot={dt * 60 + ph * 20} />);
+    const pr = 5 + r() * 4;
+    // petals never drift into a text zone (24 px padding + the petal itself)
+    if (avoid.some((z) => x > z.x - 36 && x < z.x + z.w + 36 && y > z.y - 36 && y < z.y + z.h + 36)) continue;
+    out.push(<g key={i} data-kind="graphic" data-id="petal"><Marigold x={x} y={y} r={pr} rot={dt * 60 + ph * 20} /></g>);
   }
-  return <g data-kind="graphic" data-id="petals">{out}</g>;
+  return <g data-id="petals">{out}</g>;
 };
 
 function onRidge(x: number, w: number, base: number, amp: number, seed: number, n: number, at: number) {
