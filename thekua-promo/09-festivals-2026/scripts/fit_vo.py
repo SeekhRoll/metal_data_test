@@ -8,7 +8,7 @@ import sys
 
 import soundfile as sf
 
-GAP = .7
+GAP = .55
 
 
 def main(vo_path, tl_path):

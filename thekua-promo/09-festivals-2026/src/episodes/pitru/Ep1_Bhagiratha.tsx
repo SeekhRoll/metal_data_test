@@ -46,9 +46,9 @@ const Yagya: React.FC<{ t: number; u: number }> = ({ t, u }) => {
 const TALL = 2700;
 const SON_PATH = (i: number) => { const u = i / 13; return [220 + u * 560 + (i % 2) * 40, 520 + u * 1500] as const; };
 const Sons: React.FC<{ t: number; u: number }> = ({ t, u }) => {
-  const tt = onTwos(t), cam = -ease(seg(u, .8, 8.5)) * (TALL - W.h), arrived = u > 8.4;
+  const tt = onTwos(t), cam = -ease(seg(u, .5, 6.2)) * (TALL - W.h), arrived = u > 6.4;
   const kids: React.ReactNode[] = [];
-  const visible = Math.floor(seg(u, .3, 7.5) * 14);
+  const visible = Math.floor(seg(u, .2, 5.6) * 14);
   if (!arrived) for (let i = 0; i < visible; i++) { const [x, y] = SON_PATH(i); const ph = Math.floor(tt * 4 + i) % 2; kids.push(<g key={i} transform={`translate(${x} ${y}) scale(.26)`}><Son pose={ph ? 'dig' : 'down'} turban={[P.saffron, '#D9707C', '#6E8B3D', '#5F8FC0'][i % 4]} blink={blinkAt(t, i)} /></g>); }
   else for (let i = 0; i < 6; i++) kids.push(<g key={i} transform={`translate(${990 - i * 40} ${W.y + TALL - 300 - 646 * .34 + (i % 2) * 14}) scale(-.34 .34)`}><Son pose="point" turban={[P.saffron, '#D9707C', '#6E8B3D', '#5F8FC0'][i % 4]} blink={blinkAt(t, i)} /></g>);
   return (
@@ -73,7 +73,7 @@ const Sons: React.FC<{ t: number; u: number }> = ({ t, u }) => {
 };
 
 const Gaze: React.FC<{ t: number; u: number }> = ({ t, u }) => {
-  const open = ease(seg(u, .9, 1.5)), wave = seg(u, 1.6, 3.2), fade = seg(u, 2.2, 4.2);
+  const open = ease(seg(u, 1.4, 2.0)), wave = seg(u, 2.1, 3.6), fade = seg(u, 2.6, 4.4);
   return (
     <g>
       <rect x={W.x} y={W.y} width={W.w} height={W.h} fill="#2B2230" />
@@ -82,10 +82,10 @@ const Gaze: React.FC<{ t: number; u: number }> = ({ t, u }) => {
       {/* the gaze: a pale wave of light passing over the sons, who turn to still silhouettes and drift away as motes */}
       {wave > 0 && wave < 1 && <rect x={330 + wave * 700 - 160} y={W.y} width={160} height={W.h} fill="#FFFBEF" opacity={.55 * Math.sin(wave * Math.PI)} filter="url(#softBlur)" />}
       {Array.from({ length: 6 }, (_, i) => {
-        const hit = seg(u, 1.6 + i * .18, 2.2 + i * .18);
+        const hit = seg(u, 2.1 + i * .18, 2.7 + i * .18);
         return <g key={i} opacity={1 - fade} filter={hit > .3 ? 'url(#silhouette)' : undefined} transform={`translate(${980 - i * 60} ${1200 - 646 * .44 + (i % 2) * 14}) scale(-.44 .44)`}><Son pose="point" blink={0} turban={[P.saffron, '#D9707C', '#6E8B3D'][i % 3]} /></g>;
       })}
-      <Motes n={120} x={620} y={1150} w={380} t={Math.max(0, u - 2.6)} col="#E9E4DA" rise={90} seed={11} />
+      <Motes n={120} x={620} y={1150} w={380} t={Math.max(0, u - 3.0)} col="#E9E4DA" rise={90} seed={11} />
     </g>
   );
 };
@@ -199,5 +199,5 @@ export const Ep1Frame: React.FC<{ t: number }> = ({ t }) => {
 };
 
 export const Ep1: React.FC = () => { const f = useCurrentFrame(); return <Ep1Frame t={f / FPS} />; };
-export const Ep1Check = makeCheck(Ep1Frame, EP1_SCENES);
+export const Ep1Check = makeCheck(Ep1Frame, EP1_SCENES, { x0: W.x, y0: W.y, x1: W.x + W.w, y1: W.y + W.h });
 export const EP1_FRAMES = Math.round(EP1_DUR * FPS);

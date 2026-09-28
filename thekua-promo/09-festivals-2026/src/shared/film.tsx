@@ -60,17 +60,20 @@ function boxes(root: HTMLElement, kind: string): Box[] {
     return { id: el.getAttribute('data-id') ?? `${kind}${i}`, x0: (b.left - r0.left) * k, y0: (b.top - r0.top) * k, x1: (b.right - r0.left) * k, y1: (b.bottom - r0.top) * k };
   }).filter((b) => b.x1 > b.x0 && b.y1 > b.y0);
 }
-export function collisions(root: HTMLElement) {
+// graphics are clipped to the painting window, so only the visible part of their box counts
+export type Clip = { x0: number; y0: number; x1: number; y1: number };
+export function collisions(root: HTMLElement, clip?: Clip) {
   const out: string[] = [];
-  for (const t of boxes(root, 'text')) for (const g of boxes(root, 'graphic'))
+  const gs = boxes(root, 'graphic').map((g) => clip ? { ...g, x0: Math.max(g.x0, clip.x0), y0: Math.max(g.y0, clip.y0), x1: Math.min(g.x1, clip.x1), y1: Math.min(g.y1, clip.y1) } : g).filter((g) => g.x1 > g.x0 && g.y1 > g.y0);
+  for (const t of boxes(root, 'text')) for (const g of gs)
     if (t.x0 - PAD < g.x1 && g.x0 < t.x1 + PAD && t.y0 - PAD < g.y1 && g.y0 < t.y1 + PAD) out.push(`${t.id} x ${g.id}`);
   return out;
 }
-export function makeCheck(Frame: React.FC<{ t: number }>, scenes: Scene[]) {
+export function makeCheck(Frame: React.FC<{ t: number }>, scenes: Scene[], clip?: Clip) {
   const C: React.FC = () => {
     const f = useCurrentFrame() * 6, t = f / FPS, ref = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
-      const hits = collisions(ref.current!);
+      const hits = collisions(ref.current!, clip);
       if (hits.length) throw new Error(`TEXT COLLISION · scene ${sceneAt(scenes, t).id} · frame ${f} (${t.toFixed(2)} s): ${[...new Set(hits)].slice(0, 8).join('; ')}`);
     }, [f]);
     return <AbsoluteFill ref={ref}><Frame t={t} /></AbsoluteFill>;
