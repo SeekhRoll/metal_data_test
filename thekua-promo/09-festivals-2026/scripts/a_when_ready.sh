@@ -4,7 +4,8 @@ B="--browser-executable=/opt/pw-browsers/chromium_headless_shell-1194/chrome-lin
 for d in "$@"; do
   n=$(python3 -c "import json;print(len(json.load(open('vo/navratri-A$d.json'))))")
   until [ "$(ls assets/vo/takes | grep -c "^a${d}_")" -ge $((n * 2)) ]; do sleep 30; done
-  python3 scripts/pick_vo.py vo/navratri-A$d.json > /dev/null 2>&1
+  # skip picking when every line already has a picked take (e.g. after a machine restart)
+  [ "$(ls assets/vo | grep -c "^a${d}_.*\.wav$")" -ge "$n" ] || python3 scripts/pick_vo.py vo/navratri-A$d.json > /dev/null 2>&1
   python3 scripts/fit_a.py $d
   npx remotion render src/index.ts NavratriACheck$d build/checkA$d.mp4 --scale=0.25 $B --log=error || { echo "day $d: text collision FAIL"; exit 1; }
   echo "day $d: check PASS"
