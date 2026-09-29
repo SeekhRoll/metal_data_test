@@ -80,7 +80,7 @@ export function makeCheck(Frame: React.FC<{ t: number }>, scenes: Scene[], clip?
     const f = useCurrentFrame() * 6, t = f / FPS, ref = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
       const hits = collisions(ref.current!, clip);
-      if (hits.length) throw new Error(`TEXT COLLISION · scene ${sceneAt(scenes, t).id} · frame ${f} (${t.toFixed(2)} s): ${[...new Set(hits)].slice(0, 8).join('; ')}`);
+      if (hits.length) throw new Error(`TEXT COLLISION · scene ${sceneAt(scenes, t)?.id ?? "-"} · frame ${f} (${t.toFixed(2)} s): ${[...new Set(hits)].slice(0, 8).join('; ')}`);
     }, [f]);
     return <AbsoluteFill ref={ref}><Frame t={t} /></AbsoluteFill>;
   };
